@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { TokenSidebarProvider } from "./tokenSidebar";
+import type { QuotaSummary } from "./types.js";
 
 type UsageDetail = { modelCode: string; usage: number };
 
@@ -53,6 +54,32 @@ function getStatusBackgroundColor(usedPct: number): vscode.ThemeColor | undefine
     return new vscode.ThemeColor("statusBarItem.warningBackground");
   }
   return undefined;
+}
+
+function buildQuotaSummary(data: QuotaResponse["data"]): QuotaSummary | undefined {
+  const tokenLimit = data.limits.find((limit) => limit.type === "TOKENS_LIMIT");
+  if (!tokenLimit) {
+    return undefined;
+  }
+
+  const usedPercentage = tokenLimit.percentage ?? 0;
+  const limitTokens = tokenLimit.number ?? 0;
+  const usedTokens = tokenLimit.usage
+    ?? tokenLimit.currentValue
+    ?? (limitTokens > 0 ? Math.round((limitTokens * usedPercentage) / 100) : 0);
+  const remainingTokens = tokenLimit.remaining ?? Math.max(limitTokens - usedTokens, 0);
+  const remainingPercentage = Math.max(0, Math.min(100, 100 - usedPercentage));
+
+  return {
+    usedTokens,
+    limitTokens,
+    remainingTokens,
+    usedPercentage,
+    remainingPercentage,
+    nextResetTime: tokenLimit.nextResetTime,
+    resetTimeLabel: formatResetTime(tokenLimit.nextResetTime),
+    resetDurationLabel: formatDuration(tokenLimit.nextResetTime),
+  };
 }
 
 function buildTooltip(data: QuotaResponse["data"]): vscode.MarkdownString {
@@ -113,21 +140,23 @@ async function fetchUsage(): Promise<QuotaResponse | undefined> {
   }
 }
 
-async function updateStatusBar(): Promise<void> {
+async function updateStatusBar(): Promise<QuotaSummary | null> {
   const data = await fetchUsage();
   if (!data?.data) {
     statusBarItem.text = "$(zap) TokenLens ?";
+    statusBarItem.backgroundColor = undefined;
     statusBarItem.tooltip = "No API key configured. Click to set API key.";
     statusBarItem.command = {
       command: "token-lens.setApiKey",
       title: "Set API Key",
     };
     statusBarItem.show();
-    return;
+    return null;
   }
 
   const tokenLimit = data.data.limits.find((l) => l.type === "TOKENS_LIMIT");
   const usedPct = tokenLimit?.percentage ?? 0;
+  const quotaSummary = buildQuotaSummary(data.data);
 
   statusBarItem.text = `$(zap) ${usedPct.toFixed(0)}%`;
   statusBarItem.backgroundColor = getStatusBackgroundColor(usedPct);
@@ -137,6 +166,8 @@ async function updateStatusBar(): Promise<void> {
     title: "Refresh",
   };
   statusBarItem.show();
+
+  return quotaSummary ?? null;
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -160,7 +191,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("token-lens.refresh", async () => {
       statusBarItem.text = "$(loading~spin) Usage ...";
-      await Promise.all([updateStatusBar(), tokenSidebar.refresh()]);
+      const quotaSummary = await updateStatusBar();
+      await tokenSidebar.refresh(quotaSummary);
     }),
   );
 
@@ -174,16 +206,22 @@ export function activate(context: vscode.ExtensionContext): void {
       if (apiKey !== undefined) {
         await secrets.store("apiKey", apiKey);
         vscode.window.showInformationMessage("API key saved securely.");
-        await updateStatusBar();
+        const quotaSummary = await updateStatusBar();
+        await tokenSidebar.refresh(quotaSummary);
       }
     }),
   );
 
-  updateStatusBar();
+  void (async () => {
+    const quotaSummary = await updateStatusBar();
+    await tokenSidebar.refresh(quotaSummary);
+  })();
 
   refreshTimer = setInterval(() => {
-    updateStatusBar();
-    tokenSidebar.refresh();
+    void (async () => {
+      const quotaSummary = await updateStatusBar();
+      await tokenSidebar.refresh(quotaSummary);
+    })();
   }, 5 * 60 * 1000);
   context.subscriptions.push({
     dispose: () => {

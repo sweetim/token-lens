@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 import { queryProjectTokens, queryDayTokens } from "./db.js";
 import { getHtml } from "./html.js";
+import type { QuotaSummary } from "./types.js";
 
 export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "token-lens.tokenSidebar";
   private view?: vscode.WebviewView;
+  private quotaSummary?: QuotaSummary;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -14,15 +16,16 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
     this.refresh();
   }
 
-  public async refresh(): Promise<void> {
+  public async refresh(quotaSummary: QuotaSummary | null = this.quotaSummary ?? null): Promise<void> {
+    this.quotaSummary = quotaSummary ?? undefined;
     if (!this.view) {
       return;
     }
     try {
       const [projects, days] = await Promise.all([queryProjectTokens(), queryDayTokens()]);
-      this.view.webview.html = getHtml(projects, days);
+      this.view.webview.html = getHtml(projects, days, this.quotaSummary);
     } catch {
-      this.view.webview.html = getHtml([], []);
+      this.view.webview.html = getHtml([], [], this.quotaSummary);
     }
   }
 }

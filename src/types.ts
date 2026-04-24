@@ -23,6 +23,18 @@ type DayTokens = {
   totalCost: number;
   steps: number;
   sessions: number;
+  duration: number;
 };
 
-export { ProjectTokens, DayTokens };
+type QuotaSummary = {
+  usedTokens: number;
+  limitTokens: number;
+  remainingTokens: number;
+  usedPercentage: number;
+  remainingPercentage: number;
+  nextResetTime: number;
+  resetTimeLabel: string;
+  resetDurationLabel: string;
+};
+
+export { ProjectTokens, DayTokens, QuotaSummary };

@@ -38,7 +38,8 @@ SELECT
   SUM(CAST(json_extract(part.data, '$.tokens.cache.write') AS INTEGER)) AS cache_write,
   ROUND(SUM(CAST(json_extract(part.data, '$.cost') AS REAL)), 2) AS total_cost,
   COUNT(*) AS steps,
-  COUNT(DISTINCT s.id) AS sessions
+  COUNT(DISTINCT s.id) AS sessions,
+  (MAX(part.time_created) - MIN(part.time_created)) AS duration
 FROM part
 JOIN message ON message.id = part.message_id
 JOIN session s ON s.id = message.session_id
@@ -96,6 +97,7 @@ function queryDayTokens(): Promise<DayTokens[]> {
     totalCost: Number(r.total_cost) || 0,
     steps: Number(r.steps) || 0,
     sessions: Number(r.sessions) || 0,
+    duration: Number(r.duration) || 0,
   }));
 }
 
