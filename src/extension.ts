@@ -1,26 +1,197 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { TokenSidebarProvider } from "./tokenSidebar";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+type UsageDetail = { modelCode: string; usage: number };
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "zai-status-info" is now active!');
+type Limit = {
+  type: string;
+  unit: number;
+  number: number;
+  usage?: number;
+  currentValue?: number;
+  remaining?: number;
+  percentage?: number;
+  nextResetTime: number;
+  usageDetails?: UsageDetail[];
+};
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('zai-status-info.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from zai-status-info!');
-	});
+type QuotaResponse = {
+  code: number;
+  data: {
+    limits: Limit[];
+    level: string;
+  };
+};
 
-	context.subscriptions.push(disposable);
+function formatResetTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString();
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+function formatDuration(timestamp: number): string {
+  const diff = timestamp - Date.now();
+  if (diff <= 0) {
+    return "now";
+  }
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
+function buildBar(usedPct: number): string {
+  const filled = Math.round((usedPct / 100) * 10);
+  return "░".repeat(filled) + "█".repeat(10 - filled);
+}
+
+function getStatusBackgroundColor(usedPct: number): vscode.ThemeColor | undefined {
+  if (usedPct >= 80) {
+    return new vscode.ThemeColor("statusBarItem.errorBackground");
+  }
+  if (usedPct >= 50) {
+    return new vscode.ThemeColor("statusBarItem.warningBackground");
+  }
+  return undefined;
+}
+
+function buildTooltip(data: QuotaResponse["data"]): vscode.MarkdownString {
+  const md = new vscode.MarkdownString("", true);
+  md.supportHtml = true;
+  md.isTrusted = true;
+
+  const tokenLimit = data.limits.find((l) => l.type === "TOKENS_LIMIT");
+  const usedPct = tokenLimit?.percentage ?? 0;
+  const remainingPct = 100 - usedPct;
+
+  const gradientColors = [
+    "#4ec9b0", "#5ec47a", "#7ebc4a", "#a0b030",
+    "#c8a020", "#e08c18", "#e87020", "#f05828",
+    "#f44040", "#f44767",
+  ];
+  const barFilled = Math.round((usedPct / 100) * 20);
+  const usedColor = barFilled > 0 ? gradientColors[Math.min(barFilled - 1, gradientColors.length - 1)] : gradientColors[0];
+  let bar = "";
+  for (let i = 0; i < 20; i++) {
+    const color = i < barFilled ? gradientColors[Math.min(i, gradientColors.length - 1)] : "#555";
+    bar += `<span style="color:${color};">█</span>`;
+  }
+
+  md.appendMarkdown(`<span style="font-size:13px;"><b>$(spark) TokenLens</b></span>\n\n`);
+  md.appendMarkdown(`<span style="color:${usedColor};font-size:18px;font-weight:bold;">${usedPct.toFixed(1)}%</span>\n\n`);
+  md.appendMarkdown(`<code style="font-size:10px;letter-spacing:-1px;">${bar}</code>\n\n`);
+  md.appendMarkdown(`Remaining: **${remainingPct.toFixed(1)}%**\n\n`);
+  if (tokenLimit) {
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`$(clock) Resets **${formatDuration(tokenLimit.nextResetTime)}**\n\n`);
+    md.appendMarkdown(`<span style="color:var(--vscode-descriptionForeground);">${formatResetTime(tokenLimit.nextResetTime)}</span>`);
+  }
+
+  return md;
+}
+
+let statusBarItem: vscode.StatusBarItem;
+let refreshTimer: ReturnType<typeof setInterval> | undefined;
+let secrets: vscode.SecretStorage;
+let tokenSidebar: TokenSidebarProvider;
+
+async function fetchUsage(): Promise<QuotaResponse | undefined> {
+  const apiKey = await secrets.get("apiKey");
+  if (!apiKey) {
+    return undefined;
+  }
+  try {
+    const response = await fetch("https://api.z.ai/api/monitor/usage/quota/limit", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      return undefined;
+    }
+    return (await response.json()) as QuotaResponse;
+  } catch {
+    return undefined;
+  }
+}
+
+async function updateStatusBar(): Promise<void> {
+  const data = await fetchUsage();
+  if (!data?.data) {
+    statusBarItem.text = "$(zap) TokenLens ?";
+    statusBarItem.tooltip = "No API key configured. Click to set API key.";
+    statusBarItem.command = {
+      command: "token-lens.setApiKey",
+      title: "Set API Key",
+    };
+    statusBarItem.show();
+    return;
+  }
+
+  const tokenLimit = data.data.limits.find((l) => l.type === "TOKENS_LIMIT");
+  const usedPct = tokenLimit?.percentage ?? 0;
+
+  statusBarItem.text = `$(zap) ${usedPct.toFixed(0)}%`;
+  statusBarItem.backgroundColor = getStatusBackgroundColor(usedPct);
+  statusBarItem.tooltip = buildTooltip(data.data);
+  statusBarItem.command = {
+    command: "token-lens.refresh",
+    title: "Refresh",
+  };
+  statusBarItem.show();
+}
+
+export function activate(context: vscode.ExtensionContext): void {
+  secrets = context.secrets;
+
+  tokenSidebar = new TokenSidebarProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(TokenSidebarProvider.viewType, tokenSidebar),
+  );
+
+  statusBarItem = vscode.window.createStatusBarItem(
+    "token-lens",
+    vscode.StatusBarAlignment.Right,
+    100,
+  );
+  statusBarItem.name = "TokenLens";
+  statusBarItem.text = "$(zap) TokenLens ...";
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("token-lens.refresh", async () => {
+      statusBarItem.text = "$(loading~spin) Usage ...";
+      await Promise.all([updateStatusBar(), tokenSidebar.refresh()]);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("token-lens.setApiKey", async () => {
+      const apiKey = await vscode.window.showInputBox({
+        prompt: "Enter your API key",
+        password: true,
+        ignoreFocusOut: true,
+      });
+      if (apiKey !== undefined) {
+        await secrets.store("apiKey", apiKey);
+        vscode.window.showInformationMessage("API key saved securely.");
+        await updateStatusBar();
+      }
+    }),
+  );
+
+  updateStatusBar();
+
+  refreshTimer = setInterval(() => {
+    updateStatusBar();
+    tokenSidebar.refresh();
+  }, 5 * 60 * 1000);
+  context.subscriptions.push({
+    dispose: () => {
+      if (refreshTimer !== undefined) {
+        clearInterval(refreshTimer);
+      }
+    },
+  });
+}
+
+export function deactivate(): void {}

@@ -1,6 +1,9 @@
 {
 	"compilerOptions": {
 		"module": "Node16",
+		"types": [
+			"node"
+		],
 		"target": "ES2022",
 		"lib": [
 			"ES2022"
