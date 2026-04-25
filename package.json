@@ -3,6 +3,30 @@
   "displayName": "TokenLens",
   "description": "Visualize LLM provider token usage in the status bar",
   "version": "0.0.1",
+  "license": "MIT",
+  "icon": "icons/logo.png",
+  "galleryBanner": {
+    "color": "#1A0533",
+    "theme": "dark"
+  },
+  "keywords": [
+    "token",
+    "usage",
+    "llm",
+    "ai",
+    "cost",
+    "analytics",
+    "monitor",
+    "dashboard"
+  ],
+  "homepage": "https://github.com/sweetim/token-usage-info#readme",
+  "bugs": {
+    "url": "https://github.com/sweetim/token-usage-info/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sweetim/token-usage-info.git"
+  },
   "publisher": "timx",
   "engines": {
     "vscode": "^1.116.0"

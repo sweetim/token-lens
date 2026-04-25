@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { queryProjectTokens, queryDayTokens } from "./db.js";
+import { queryProjectTokens, queryDayTokens, queryProjectDayTokens } from "./db.js";
 import { getHtml } from "./html.js";
 import type { QuotaSummary } from "./types.js";
 
@@ -22,10 +22,10 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
-      const [projects, days] = await Promise.all([queryProjectTokens(), queryDayTokens()]);
-      this.view.webview.html = getHtml(projects, days, this.quotaSummary);
+      const [projects, days, projectDays] = await Promise.all([queryProjectTokens(), queryDayTokens(), queryProjectDayTokens()]);
+      this.view.webview.html = getHtml(projects, days, projectDays, this.quotaSummary);
     } catch {
-      this.view.webview.html = getHtml([], [], this.quotaSummary);
+      this.view.webview.html = getHtml([], [], [], this.quotaSummary);
     }
   }
 }

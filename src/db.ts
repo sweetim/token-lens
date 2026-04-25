@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ProjectTokens, DayTokens } from "./types.js";
+import type { ProjectTokens, DayTokens, ProjectDayTokens } from "./types.js";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 
@@ -46,6 +46,29 @@ JOIN session s ON s.id = message.session_id
 WHERE json_extract(part.data, '$.type') = 'step-finish'
 GROUP BY day
 ORDER BY day DESC;
+`;
+
+const PROJECT_DAY_QUERY = `
+SELECT
+  REPLACE(p.worktree, '${homedir()}/projects/', '') AS project,
+  date(part.time_created / 1000, 'unixepoch') AS day,
+  SUM(CAST(json_extract(part.data, '$.tokens.total') AS INTEGER)) AS total_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.input') AS INTEGER)) AS input_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.reasoning') AS INTEGER)) AS reasoning_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.cache.read') AS INTEGER)) AS cache_read,
+  SUM(CAST(json_extract(part.data, '$.tokens.cache.write') AS INTEGER)) AS cache_write,
+  ROUND(SUM(CAST(json_extract(part.data, '$.cost') AS REAL)), 2) AS total_cost,
+  COUNT(*) AS steps,
+  COUNT(DISTINCT s.id) AS sessions,
+  (MAX(part.time_created) - MIN(part.time_created)) AS duration
+FROM part
+JOIN message ON message.id = part.message_id
+JOIN session s ON s.id = message.session_id
+JOIN project p ON p.id = s.project_id
+WHERE json_extract(part.data, '$.type') = 'step-finish'
+GROUP BY p.worktree, day
+ORDER BY day DESC, total_tokens DESC;
 `;
 
 function execQuery<T>(query: string, mapRow: (r: Record<string, unknown>) => T): Promise<T[]> {
@@ -101,4 +124,21 @@ function queryDayTokens(): Promise<DayTokens[]> {
   }));
 }
 
-export { queryProjectTokens, queryDayTokens };
+function queryProjectDayTokens(): Promise<ProjectDayTokens[]> {
+  return execQuery(PROJECT_DAY_QUERY, (r) => ({
+    project: String(r.project ?? ""),
+    day: String(r.day ?? ""),
+    totalTokens: Number(r.total_tokens) || 0,
+    inputTokens: Number(r.input_tokens) || 0,
+    outputTokens: Number(r.output_tokens) || 0,
+    reasoningTokens: Number(r.reasoning_tokens) || 0,
+    cacheRead: Number(r.cache_read) || 0,
+    cacheWrite: Number(r.cache_write) || 0,
+    totalCost: Number(r.total_cost) || 0,
+    steps: Number(r.steps) || 0,
+    sessions: Number(r.sessions) || 0,
+    duration: Number(r.duration) || 0,
+  }));
+}
+
+export { queryProjectTokens, queryDayTokens, queryProjectDayTokens };

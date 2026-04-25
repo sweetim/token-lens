@@ -26,6 +26,21 @@ type DayTokens = {
   duration: number;
 };
 
+type ProjectDayTokens = {
+  project: string;
+  day: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheRead: number;
+  cacheWrite: number;
+  totalCost: number;
+  steps: number;
+  sessions: number;
+  duration: number;
+};
+
 type QuotaSummary = {
   usedTokens: number;
   limitTokens: number;
@@ -37,4 +52,4 @@ type QuotaSummary = {
   resetDurationLabel: string;
 };
 
-export { ProjectTokens, DayTokens, QuotaSummary };
+export { ProjectTokens, DayTokens, ProjectDayTokens, QuotaSummary };

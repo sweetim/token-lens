@@ -1,4 +1,4 @@
-import type { ProjectTokens, DayTokens, QuotaSummary } from "./types.js";
+import type { ProjectTokens, DayTokens, ProjectDayTokens, QuotaSummary } from "./types.js";
 import { formatTokens, escapeHtml, formatDay, formatDurationMs } from "./format.js";
 import { stackedBarHtml, SEG_COLORS } from "./bars.js";
 
@@ -23,6 +23,7 @@ type DailyChartConfig = {
   title: string;
   valueFormat: "tokens" | "number";
   fillArea?: boolean;
+  hideTitle?: boolean;
   series: DailyChartSeries[];
 };
 
@@ -36,11 +37,11 @@ function buildDailyChartSection(chart: DailyChartConfig): string {
   return `
     <section class="daily-chart-section" data-chart-id="${chart.id}">
       <div class="daily-chart-header">
-        <div class="daily-chart-title">${escapeHtml(chart.title)}</div>
+        ${chart.hideTitle ? "" : `<div class="daily-chart-title">${escapeHtml(chart.title)}</div>`}
         <div class="daily-chart-legend">${legend}</div>
       </div>
       <div class="daily-chart-wrap">
-        <svg class="daily-chart" data-chart-svg viewBox="0 0 720 240" role="img" aria-label="${escapeHtml(chart.title)} daily chart"></svg>
+        <svg class="daily-chart" data-chart-svg viewBox="0 0 720 240" role="img" aria-label="${escapeHtml(chart.title)} chart"></svg>
         <div class="daily-chart-tooltip" data-chart-tooltip hidden></div>
       </div>
     </section>`;
@@ -79,6 +80,24 @@ function getDailyChartConfigs(): DailyChartConfig[] {
   ];
 }
 
+function mapChartDayData(row: DayTokens | ProjectDayTokens) {
+  return {
+    day: row.day,
+    dayLabel: formatDay(row.day),
+    totalTokens: row.totalTokens,
+    totalTokensLabel: formatTokens(row.totalTokens),
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    reasoningTokens: row.reasoningTokens,
+    cacheRead: row.cacheRead,
+    cacheWrite: row.cacheWrite,
+    totalCost: row.totalCost,
+    sessions: row.sessions,
+    steps: row.steps,
+    duration: formatDurationMs(row.duration),
+  };
+}
+
 function buildDailyLineChart(days: DayTokens[], chartConfigs: DailyChartConfig[]): string {
   if (days.length === 0) {
     return '<p class="empty">No daily token usage data found.</p>';
@@ -111,6 +130,14 @@ function buildDailyLineChart(days: DayTokens[], chartConfigs: DailyChartConfig[]
     </div>`;
 }
 
+const Z_AI_LOGO_SVG = `
+  <svg class="quota-brand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="2" y="2" width="20" height="20" rx="3" fill="currentColor"></rect>
+    <path d="M12.5 5.5L11.4 7.1c-.15.22-.41.36-.7.36H5.5V5.5h7z" fill="#fff"></path>
+    <path d="M18.5 5.5L9.7 18.5H5.5L14.3 5.5h4.2z" fill="#fff"></path>
+    <path d="M11.5 18.5l1.1-1.6c.15-.22.41-.36.7-.36h5.2v1.96h-7z" fill="#fff"></path>
+  </svg>`;
+
 function getRemainingBarColor(remainingPercentage: number): string {
   if (remainingPercentage <= 20) {
     return "var(--vscode-charts-red, #f14c4c)";
@@ -121,59 +148,58 @@ function getRemainingBarColor(remainingPercentage: number): string {
   return "var(--green)";
 }
 
-function buildQuotaSection(quotaSummary: QuotaSummary | undefined, todayTotalTokens: number): string {
-  const usedTokensLabel = quotaSummary ? formatTokens(quotaSummary.usedTokens) : "Unavailable";
-  const todayTotalTokensLabel = formatTokens(todayTotalTokens);
+function buildQuotaSection(quotaSummary: QuotaSummary | undefined): string {
   const resetDurationLabel = quotaSummary ? quotaSummary.resetDurationLabel : "Unavailable";
   const remainingPercentage = quotaSummary ? Math.max(0, Math.min(100, quotaSummary.remainingPercentage)) : 0;
-  const remainingTokensLabel = quotaSummary ? formatTokens(quotaSummary.remainingTokens) : "Unavailable";
-  const quotaLimitLabel = quotaSummary && quotaSummary.limitTokens > 0
-    ? formatTokens(quotaSummary.limitTokens)
-    : "Unknown limit";
-  const resetTimeLabel = quotaSummary ? escapeHtml(quotaSummary.resetTimeLabel) : "API data unavailable";
+  const usedPercentage = 100 - remainingPercentage;
 
   return `
     <div class="quota-hero">
-      <div class="hero-title">z.ai Quota Usage</div>
-      <div class="quota-grid">
-        <div class="hero-stat">
-          <span class="val tokens">${usedTokensLabel}</span>
-          <span class="lbl">Today Token Usage</span>
+      <div class="quota-header">
+        <div class="quota-brand">
+          ${Z_AI_LOGO_SVG}
+          <span class="quota-title">Quota Usage</span>
         </div>
-        <div class="hero-stat">
-          <span class="val tokens">${todayTotalTokensLabel}</span>
-          <span class="lbl">Total Token Usage For Today</span>
-        </div>
-        <div class="hero-stat">
-          <span class="val reset">${escapeHtml(resetDurationLabel)}</span>
-          <span class="lbl">Reset Time</span>
-        </div>
+        <span class="quota-reset-badge">reset ${escapeHtml(resetDurationLabel)}</span>
       </div>
       <div class="quota-progress-section">
         <div class="quota-progress-header">
-          <span class="quota-progress-label">Remaining Token Usage</span>
-          <span class="quota-progress-value">${remainingPercentage.toFixed(1)}%</span>
+          <span class="quota-progress-label">Usage</span>
+          <span class="quota-progress-value">${usedPercentage.toFixed(1)}% used</span>
         </div>
         <div class="quota-progress-track">
-          <div class="quota-progress-fill" style="width:${remainingPercentage.toFixed(1)}%;background:${getRemainingBarColor(remainingPercentage)}"></div>
-        </div>
-        <div class="quota-progress-meta">
-          <span>${remainingTokensLabel} remaining of ${quotaLimitLabel}</span>
-          <span>${resetTimeLabel}</span>
+          <div class="quota-progress-fill" style="width:${usedPercentage.toFixed(1)}%;background:${getRemainingBarColor(remainingPercentage)}"></div>
         </div>
       </div>
     </div>`;
 }
 
-function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: QuotaSummary): string {
+function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: ProjectDayTokens[], quotaSummary?: QuotaSummary): string {
   const grandTotal = projects.reduce((s, r) => s + r.totalTokens, 0);
   const grandCost = projects.reduce((s, r) => s + r.totalCost, 0);
   const grandSteps = projects.reduce((s, r) => s + r.steps, 0);
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayTotalTokens = days.find((day) => day.day === todayKey)?.totalTokens ?? 0;
+  const projectDaysByProject = projectDays.reduce((result, row) => {
+    const rows = result.get(row.project);
+    if (rows) {
+      rows.push(row);
+    } else {
+      result.set(row.project, [row]);
+    }
+    return result;
+  }, new Map<string, ProjectDayTokens[]>());
+  const projectChartConfigs = projects.map((project, index) => ({
+    id: `project-total-chart-${index}`,
+    title: "",
+    valueFormat: "tokens" as const,
+    fillArea: true,
+    hideTitle: true,
+    series: [{ key: "totalTokens" as const, label: "total tokens", color: "var(--accent)" }],
+  }));
 
   const projectCards = projects
-    .map((r) => {
+    .map((r, index) => {
       const bar = stackedBarHtml(r.totalTokens, [
         { value: r.inputTokens, color: SEG_COLORS.input },
         { value: r.outputTokens, color: SEG_COLORS.output },
@@ -181,8 +207,10 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
         { value: r.cacheRead, color: SEG_COLORS.cacheRead },
         { value: r.cacheWrite, color: SEG_COLORS.cacheWrite },
       ]);
+      const projectDayRows = projectDaysByProject.get(r.project) ?? [];
+      const projectChart = projectChartConfigs[index];
       return `
-      <div class="card" onclick="this.classList.toggle('expanded')">
+      <div class="card" data-project-card>
         <div class="card-header">
           <span class="card-name">${escapeHtml(r.project)}</span>
           <span class="card-cost">$${r.totalCost.toFixed(2)}</span>
@@ -243,6 +271,9 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
               <span class="stat-label">duration</span>
             </div>
           </div>
+          <div class="project-card-section">
+            ${projectDayRows.length > 0 ? buildDailyChartSection(projectChart) : '<p class="empty">No daily token usage data found for this project.</p>'}
+          </div>
         </div>
       </div>`;
     })
@@ -264,18 +295,7 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
   const summaryKeys = new Set(["inputTokens", "outputTokens"]);
   const dayDataJson = JSON.stringify(
     days.map((r) => ({
-      day: r.day,
-      dayLabel: formatDay(r.day),
-      totalTokens: r.totalTokens,
-      inputTokens: r.inputTokens,
-      outputTokens: r.outputTokens,
-      reasoningTokens: r.reasoningTokens,
-      cacheRead: r.cacheRead,
-      cacheWrite: r.cacheWrite,
-      totalCost: r.totalCost,
-      sessions: r.sessions,
-      steps: r.steps,
-      duration: formatDurationMs(r.duration),
+      ...mapChartDayData(r),
       summaryBars: tokenTypes.filter((t) => summaryKeys.has(t.key)).map((t) => ({
         label: t.label,
         color: t.color,
@@ -292,6 +312,15 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
   );
   const dailyChartConfigs = getDailyChartConfigs();
   const dailyChartDataJson = JSON.stringify(dailyChartConfigs);
+  const projectChartDataJson = JSON.stringify(projectChartConfigs);
+  const dailyChartIdsJson = JSON.stringify(dailyChartConfigs.map((chart) => chart.id));
+  const sharedDailyChartDayDataJson = JSON.stringify(days.map((day) => mapChartDayData(day)));
+  const projectChartDataSetsJson = JSON.stringify(
+    Object.fromEntries(projects.map((project, index) => [
+      projectChartConfigs[index].id,
+      (projectDaysByProject.get(project.project) ?? []).map((day) => mapChartDayData(day)),
+    ])),
+  );
   const dailyGraphHtml = buildDailyLineChart(days, dailyChartConfigs);
 
   const hasProjects = projects.length > 0;
@@ -347,14 +376,44 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
     color: var(--muted);
     margin-bottom: 10px;
   }
+  .quota-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .quota-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .quota-brand-icon {
+    width: 12px;
+    height: 12px;
+    color: var(--fg);
+    flex: 0 0 auto;
+  }
+  .quota-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--fg);
+  }
+  .quota-reset-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--border);
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
   .hero-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .quota-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
   }
   .hero-stat { display: flex; flex-direction: column; gap: 2px; }
@@ -362,24 +421,21 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
     font-size: 18px; font-weight: 700;
     font-variant-numeric: tabular-nums; line-height: 1.1;
   }
+  .hero-stat .val.today { color: var(--accent2); }
   .hero-stat .val.tokens { color: var(--accent); }
   .hero-stat .val.cost { color: var(--green); }
-  .hero-stat .val.reset { color: var(--accent2); }
   .hero-stat .val.steps { color: var(--orange); }
   .hero-stat .lbl {
     font-size: 10px; color: var(--muted);
     text-transform: uppercase; letter-spacing: .5px;
   }
   .quota-progress-section {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
+    margin-top: 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  .quota-progress-header,
-  .quota-progress-meta {
+  .quota-progress-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -401,12 +457,6 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
   .quota-progress-fill {
     height: 100%;
     border-radius: 999px;
-  }
-  .quota-progress-meta {
-    color: var(--muted);
-    font-size: 10px;
-    line-height: 1.4;
-    flex-wrap: wrap;
   }
 
   .tabs {
@@ -457,10 +507,14 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
     border-radius: 6px;
     padding: 10px 12px;
     transition: border-color .15s;
-    cursor: pointer;
     position: relative;
   }
   .card:hover { border-color: var(--accent); }
+  .card-header,
+  .card-summary,
+  .card-bar-track {
+    cursor: pointer;
+  }
   .card-summary {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -519,6 +573,13 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
   .card-stats .stat-label {
     font-size: 9px; text-transform: uppercase;
     letter-spacing: .5px; color: var(--muted);
+  }
+  .project-card-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
   }
 
   .vlist-scroll {
@@ -821,21 +882,25 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
 </style>
 </head>
 <body>
-  ${buildQuotaSection(quotaSummary, todayTotalTokens)}
+  ${buildQuotaSection(quotaSummary)}
   <div class="hero">
-    <div class="hero-title">Kilo Token Usage</div>
+    <div class="hero-title">Kilo Total Token Usage</div>
     <div class="hero-grid">
       <div class="hero-stat">
+        <span class="val today">${formatTokens(todayTotalTokens)}</span>
+        <span class="lbl">Today</span>
+      </div>
+      <div class="hero-stat">
         <span class="val tokens">${formatTokens(grandTotal)}</span>
-        <span class="lbl">Total Tokens</span>
+        <span class="lbl">Total</span>
       </div>
       <div class="hero-stat">
         <span class="val cost">$${grandCost.toFixed(2)}</span>
-        <span class="lbl">Total Cost</span>
+        <span class="lbl">Costs</span>
       </div>
       <div class="hero-stat">
         <span class="val steps">${grandSteps}</span>
-        <span class="lbl">Total Steps</span>
+        <span class="lbl">Steps</span>
       </div>
     </div>
   </div>
@@ -871,10 +936,14 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
   <script>
     const DAY_DATA = ${dayDataJson};
     const DAILY_CHARTS = ${dailyChartDataJson};
+    const PROJECT_CHARTS = ${projectChartDataJson};
+    const ALL_CHARTS = DAILY_CHARTS.concat(PROJECT_CHARTS);
+    const DAILY_CHART_IDS = new Set(${dailyChartIdsJson});
+    const DAILY_CHART_DATA = ${sharedDailyChartDayDataJson};
+    const PROJECT_CHART_DATASETS = ${projectChartDataSetsJson};
     const DAY_HEIGHT_ESTIMATE = 112;
     const DAY_GROUP_GAP = 8;
     const BUFFER = 4;
-    const CHART_DAYS = DAY_DATA.slice().reverse();
     const CHART_WIDTH = 720;
     const CHART_HEIGHT = 240;
     const CHART_PADDING_TOP = 16;
@@ -892,25 +961,11 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
     const dailyGraphView = document.getElementById('daily-view-graph');
     const dailyViewButtons = document.querySelectorAll('[data-daily-view]');
     const dailyViews = document.querySelectorAll('.daily-view');
-    const chartHiddenSeries = new Map(DAILY_CHARTS.map((chart) => [chart.id, new Set()]));
+    const projectsTab = document.getElementById('tab-projects');
+    const chartHiddenSeries = new Map(ALL_CHARTS.map((chart) => [chart.id, new Set()]));
     const expandedStates = DAY_DATA.map(() => false);
     const itemHeights = DAY_DATA.map(() => DAY_HEIGHT_ESTIMATE + DAY_GROUP_GAP);
     const offsets = new Array(DAY_DATA.length + 1).fill(0);
-    const chartAxisPoints = CHART_DAYS.map((day, index) => ({
-      dayLabel: day.dayLabel,
-      x: CHART_DAYS.length === 1
-        ? CHART_PADDING_LEFT + CHART_DRAWABLE_WIDTH / 2
-        : CHART_PADDING_LEFT + (index / (CHART_DAYS.length - 1)) * CHART_DRAWABLE_WIDTH,
-    }));
-    const chartLabelIndexes = CHART_DAYS.length <= 6
-      ? CHART_DAYS.map((_, index) => index)
-      : Array.from(new Set([
-        0,
-        Math.round((CHART_DAYS.length - 1) * 0.25),
-        Math.round((CHART_DAYS.length - 1) * 0.5),
-        Math.round((CHART_DAYS.length - 1) * 0.75),
-        CHART_DAYS.length - 1,
-      ])).sort((left, right) => left - right);
     let totalHeight = 0;
     let renderPending = false;
     let activeDailyView = 'cards';
@@ -937,8 +992,36 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       return valueFormat === 'tokens' ? formatTokensCompact(value) : String(value);
     }
 
-    function getDailyChartConfig(chartId) {
-      return DAILY_CHARTS.find((chart) => chart.id === chartId) || null;
+    function getChartConfig(chartId) {
+      return ALL_CHARTS.find((chart) => chart.id === chartId) || null;
+    }
+
+    function getChartDays(chartId) {
+      const chartDays = DAILY_CHART_IDS.has(chartId)
+        ? DAILY_CHART_DATA
+        : (PROJECT_CHART_DATASETS[chartId] || []);
+      return chartDays.slice().reverse();
+    }
+
+    function getChartAxisPoints(chartDays) {
+      return chartDays.map((day, index) => ({
+        dayLabel: day.dayLabel,
+        x: chartDays.length === 1
+          ? CHART_PADDING_LEFT + CHART_DRAWABLE_WIDTH / 2
+          : CHART_PADDING_LEFT + (index / (chartDays.length - 1)) * CHART_DRAWABLE_WIDTH,
+      }));
+    }
+
+    function getChartLabelIndexes(chartDays) {
+      return chartDays.length <= 6
+        ? chartDays.map((_, index) => index)
+        : Array.from(new Set([
+          0,
+          Math.round((chartDays.length - 1) * 0.25),
+          Math.round((chartDays.length - 1) * 0.5),
+          Math.round((chartDays.length - 1) * 0.75),
+          chartDays.length - 1,
+        ])).sort((left, right) => left - right);
     }
 
     function buildChartGuideLines(maxValue, valueFormat) {
@@ -952,7 +1035,7 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
         .join('');
     }
 
-    function buildChartXAxisLabels() {
+    function buildChartXAxisLabels(chartAxisPoints, chartLabelIndexes) {
       return chartLabelIndexes
         .map((index) => {
           const point = chartAxisPoints[index];
@@ -961,18 +1044,28 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
         .join('');
     }
 
-    function buildChartTooltip(dayItem) {
-      const rows = [
-        ['total', formatTokensCompact(dayItem.totalTokens)],
-        ['input', formatTokensCompact(dayItem.inputTokens)],
-        ['output', formatTokensCompact(dayItem.outputTokens)],
-        ['reason', formatTokensCompact(dayItem.reasoningTokens)],
-        ['cache r', formatTokensCompact(dayItem.cacheRead)],
-        ['cache w', formatTokensCompact(dayItem.cacheWrite)],
-        ['sessions', String(dayItem.sessions)],
-        ['steps', String(dayItem.steps)],
-        ['cost', '$' + dayItem.totalCost.toFixed(2)],
-      ];
+    function buildChartTooltipRows(chartConfig, dayItem, hiddenSeries) {
+      if (chartConfig.id === 'daily-total-chart') {
+        return [
+          ['total', formatTokensCompact(dayItem.totalTokens)],
+          ['input', formatTokensCompact(dayItem.inputTokens)],
+          ['output', formatTokensCompact(dayItem.outputTokens)],
+          ['reason', formatTokensCompact(dayItem.reasoningTokens)],
+          ['cache r', formatTokensCompact(dayItem.cacheRead)],
+          ['cache w', formatTokensCompact(dayItem.cacheWrite)],
+        ];
+      }
+
+      return chartConfig.series
+        .filter((seriesItem) => !hiddenSeries.has(seriesItem.key))
+        .map((seriesItem) => [
+          seriesItem.label,
+          formatChartValue(chartConfig.valueFormat, Number(dayItem[seriesItem.key]) || 0),
+        ]);
+    }
+
+    function buildChartTooltip(chartConfig, dayItem, hiddenSeries) {
+      const rows = buildChartTooltipRows(chartConfig, dayItem, hiddenSeries);
 
       return '<div class="daily-chart-tooltip-day">' + escapeHtmlText(dayItem.dayLabel) + '</div>' +
         '<div class="daily-chart-tooltip-grid">' + rows.map((row) =>
@@ -1014,13 +1107,17 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
 
       const wrap = chartSection.querySelector('.daily-chart-wrap');
       const tooltip = chartSection.querySelector('[data-chart-tooltip]');
+      const chartId = chartSection.getAttribute('data-chart-id') || '';
+      const chartConfig = getChartConfig(chartId);
+      const chartDays = getChartDays(chartId);
+      const hiddenSeries = chartHiddenSeries.get(chartId) || new Set();
       const dayIndex = Number(point.getAttribute('data-day-index'));
-      const dayItem = CHART_DAYS[dayIndex];
-      if (!(wrap instanceof HTMLElement) || !(tooltip instanceof HTMLElement) || Number.isNaN(dayIndex) || !dayItem) {
+      const dayItem = chartDays[dayIndex];
+      if (!(wrap instanceof HTMLElement) || !(tooltip instanceof HTMLElement) || Number.isNaN(dayIndex) || !dayItem || !chartConfig) {
         return;
       }
 
-      tooltip.innerHTML = buildChartTooltip(dayItem);
+      tooltip.innerHTML = buildChartTooltip(chartConfig, dayItem, hiddenSeries);
       tooltip.hidden = false;
       positionChartTooltip(tooltip, wrap, clientX, clientY);
     }
@@ -1036,18 +1133,28 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       });
     }
 
-    function renderDailyChart(chartConfig) {
+    function renderChart(chartConfig) {
       const chartSection = document.querySelector('.daily-chart-section[data-chart-id="' + chartConfig.id + '"]');
       if (!(chartSection instanceof Element)) return;
 
       const svg = chartSection.querySelector('[data-chart-svg]');
       if (!(svg instanceof SVGElement)) return;
 
+      const chartDays = getChartDays(chartConfig.id);
+      if (chartDays.length === 0) {
+        hideChartTooltip(chartSection);
+        svg.innerHTML = '';
+        return;
+      }
+
+      const chartAxisPoints = getChartAxisPoints(chartDays);
+      const chartLabelIndexes = getChartLabelIndexes(chartDays);
+
       const hiddenSeries = chartHiddenSeries.get(chartConfig.id) || new Set();
       const visibleSeries = chartConfig.series.filter((seriesItem) => !hiddenSeries.has(seriesItem.key));
       const maxValue = visibleSeries.length === 0
         ? 1
-        : CHART_DAYS.reduce((currentMaxValue, dayItem) => {
+        : chartDays.reduce((currentMaxValue, dayItem) => {
           const dayMaxValue = visibleSeries.reduce(
             (seriesMaxValue, seriesItem) => Math.max(seriesMaxValue, Number(dayItem[seriesItem.key]) || 0),
             0,
@@ -1059,10 +1166,10 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
         ? '<defs><linearGradient id="' + chartConfig.id + '-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:' + visibleSeries[0].color + '; stop-opacity: 0.24;"></stop><stop offset="100%" style="stop-color:' + visibleSeries[0].color + '; stop-opacity: 0;"></stop></linearGradient></defs>'
         : '';
       const guideLines = buildChartGuideLines(maxValue, chartConfig.valueFormat);
-      const xLabels = buildChartXAxisLabels();
+      const xLabels = buildChartXAxisLabels(chartAxisPoints, chartLabelIndexes);
       const seriesMarkup = visibleSeries
         .map((seriesItem, seriesIndex) => {
-          const points = CHART_DAYS.map((dayItem, dayIndex) => {
+          const points = chartDays.map((dayItem, dayIndex) => {
             const value = Number(dayItem[seriesItem.key]) || 0;
             return {
               dayIndex,
@@ -1095,10 +1202,14 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       updateChartLegendState(chartSection, hiddenSeries, visibleSeries.length);
     }
 
-    function renderAllDailyCharts() {
-      DAILY_CHARTS.forEach((chartConfig) => {
-        renderDailyChart(chartConfig);
+    function renderCharts(chartConfigs) {
+      chartConfigs.forEach((chartConfig) => {
+        renderChart(chartConfig);
       });
+    }
+
+    function renderAllCharts() {
+      renderCharts(ALL_CHARTS);
     }
 
     function setDailyView(nextView) {
@@ -1117,7 +1228,7 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       if (activeDailyView === 'cards') {
         scheduleRender();
       } else {
-        renderAllDailyCharts();
+        renderCharts(DAILY_CHARTS);
       }
     }
 
@@ -1162,7 +1273,7 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       ).join('');
       return '<div class="day-group' + (expandedStates[index] ? ' expanded' : '') + '" data-index="' + index + '">' +
         '<div class="day-header"><span class="day-label">' + item.dayLabel + '</span><span class="day-cost">$' + item.totalCost.toFixed(2) + '</span></div>' +
-        '<div class="day-meta"><span class="day-badge">' + item.sessions + ' session' + (item.sessions !== 1 ? 's' : '') + '</span><span class="day-badge">' + item.steps + ' steps</span><span class="day-badge">' + item.duration + '</span></div>' +
+        '<div class="day-meta"><span class="day-badge">' + item.sessions + ' session' + (item.sessions !== 1 ? 's' : '') + '</span><span class="day-badge">' + item.steps + ' steps</span><span class="day-badge">' + item.duration + '</span><span class="day-badge">' + item.totalTokensLabel + ' tokens</span></div>' +
         summaryBars +
         '<div class="day-details">' + detailBars + '</div>' +
       '</div>';
@@ -1217,7 +1328,7 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       });
     }
 
-    renderAllDailyCharts();
+    renderAllCharts();
     recomputeOffsets();
 
     if (scroll) {
@@ -1248,52 +1359,69 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], quotaSummary?: Qu
       });
     }
 
-    if (dailyGraphView) {
-      dailyGraphView.addEventListener('click', (event) => {
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const legendButton = target.closest('.daily-chart-legend-item[data-series-key]');
+      if (!(legendButton instanceof HTMLButtonElement) || legendButton.disabled) return;
+
+      const chartId = legendButton.getAttribute('data-chart-id');
+      const seriesKey = legendButton.getAttribute('data-series-key');
+      const chartConfig = chartId ? getChartConfig(chartId) : null;
+      if (!chartId || !seriesKey || !chartConfig) return;
+
+      const hiddenSeries = chartHiddenSeries.get(chartId);
+      if (!hiddenSeries) return;
+
+      const isHidden = hiddenSeries.has(seriesKey);
+      const visibleSeriesCount = chartConfig.series.length - hiddenSeries.size;
+      if (!isHidden && visibleSeriesCount === 1) {
+        return;
+      }
+
+      if (isHidden) {
+        hiddenSeries.delete(seriesKey);
+      } else {
+        hiddenSeries.add(seriesKey);
+      }
+
+      renderChart(chartConfig);
+    });
+
+    const handleChartPointer = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const point = target.closest('.daily-chart-point');
+      if (!(point instanceof Element)) {
+        hideAllChartTooltips();
+        return;
+      }
+
+      showChartTooltip(point, event.clientX, event.clientY);
+    };
+
+    document.addEventListener('pointerover', handleChartPointer);
+    document.addEventListener('pointermove', handleChartPointer);
+
+    if (projectsTab) {
+      projectsTab.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
 
-        const legendButton = target.closest('.daily-chart-legend-item[data-series-key]');
-        if (!(legendButton instanceof HTMLButtonElement) || legendButton.disabled) return;
-
-        const chartId = legendButton.getAttribute('data-chart-id');
-        const seriesKey = legendButton.getAttribute('data-series-key');
-        const chartConfig = chartId ? getDailyChartConfig(chartId) : null;
-        if (!chartId || !seriesKey || !chartConfig) return;
-
-        const hiddenSeries = chartHiddenSeries.get(chartId);
-        if (!hiddenSeries) return;
-
-        const isHidden = hiddenSeries.has(seriesKey);
-        const visibleSeriesCount = chartConfig.series.length - hiddenSeries.size;
-        if (!isHidden && visibleSeriesCount === 1) {
+        const card = target.closest('.card[data-project-card]');
+        if (!(card instanceof HTMLElement)) return;
+        if (!target.closest('.card-header') && !target.closest('.card-summary') && !target.closest('.card-bar-track')) {
           return;
         }
 
-        if (isHidden) {
-          hiddenSeries.delete(seriesKey);
-        } else {
-          hiddenSeries.add(seriesKey);
-        }
-
-        renderDailyChart(chartConfig);
+        card.classList.toggle('expanded');
+        hideAllChartTooltips();
       });
+    }
 
-      const handleChartPointer = (event) => {
-        const target = event.target;
-        if (!(target instanceof Element)) return;
-
-        const point = target.closest('.daily-chart-point');
-        if (!(point instanceof Element)) {
-          hideAllChartTooltips();
-          return;
-        }
-
-        showChartTooltip(point, event.clientX, event.clientY);
-      };
-
-      dailyGraphView.addEventListener('pointerover', handleChartPointer);
-      dailyGraphView.addEventListener('pointermove', handleChartPointer);
+    if (dailyGraphView) {
       dailyGraphView.addEventListener('pointerleave', hideAllChartTooltips);
     }
 
