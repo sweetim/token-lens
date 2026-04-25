@@ -1,8 +1,8 @@
 {
   "name": "token-lens",
-  "displayName": "TokenLens",
-  "description": "Visualize LLM provider token usage in the status bar",
-  "version": "0.0.1",
+  "displayName": "Token Lens",
+  "description": "Track LLM token usage and costs in the status bar with detailed analytics in the sidebar",
+  "version": "0.1.0",
   "license": "MIT",
   "icon": "icons/logo.png",
   "galleryBanner": {
@@ -53,7 +53,7 @@
         {
           "type": "webview",
           "id": "token-lens.tokenSidebar",
-          "name": "Token Usage by Project"
+          "name": "Token Analytics"
         }
       ]
     },

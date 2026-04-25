@@ -10,7 +10,7 @@ Visualize your LLM provider token usage directly in the VS Code status bar.
 
 - Displays current token usage percentage in the status bar
 - Color-coded status: normal, warning (≥50%), and error (≥80%)
-- Rich tooltip with z.ai token totals, usage bar, and time until reset
+- Rich tooltip with a one-line z.ai usage bar plus percentage, and time until reset
 - Sidebar with daily and per-project token usage breakdown
 - Auto-refreshes every 5 minutes
 - API key stored securely using VS Code's SecretStorage

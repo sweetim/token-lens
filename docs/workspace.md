@@ -37,7 +37,7 @@ src/
 1. **Status Bar Item** (`extension.ts`)
    - Shows current token usage percentage (e.g. `$(zap) 42%`)
    - Color-coded background: normal → warning (≥50%) → error (≥80%)
-   - Rich Markdown tooltip with `TokenLens - zai`, z.ai token totals, a gradient usage bar, and time until reset
+   - Rich Markdown tooltip with `Token Lens - zai`, a single-row gradient z.ai usage bar plus percentage, and time until reset
    - Auto-refreshes every 5 minutes
    - Falls back to "TokenLens ?" with prompt to set API key if none is stored
 
@@ -46,7 +46,7 @@ src/
    - Webview with two tabs: **Projects** and **Daily**
     - **Quota section:** Progress bar showing current quota usage percentage and time until reset (fed by `QuotaSummary` from the z.ai API).
     - **Hero section:** Summary stats — today's tokens, total tokens, total cost, and total steps across all projects.
-    - **Projects tab:** Expandable cards showing per-project token breakdown (input, output, reasoning, cache read/write), cost, step count, session count, and duration. Includes stacked color bar visualization.
+    - **Projects tab:** Expandable cards showing the project name with a total-token badge, per-project token breakdown (input, output, reasoning, cache read/write), cost, step count, session count, and duration. Includes stacked color bar visualization.
     - **Daily tab:** Two sub-views toggled via a Cards/Graph pill switcher:
       - **Cards view:** Virtualized scrollable list of day-by-day usage with horizontal bar charts. Rows support expand/collapse, and the virtual list measures rendered row heights so long lists remain performant even when rows expand.
       - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), and Sessions And Steps. Shows Latest Day, Average/Day, and Peak summary stats.

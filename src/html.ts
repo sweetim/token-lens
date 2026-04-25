@@ -212,7 +212,10 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
       return `
       <div class="card" data-project-card>
         <div class="card-header">
-          <span class="card-name">${escapeHtml(r.project)}</span>
+          <div class="card-title-group">
+            <span class="card-name">${escapeHtml(r.project)}</span>
+            <span class="card-total-badge">${formatTokens(r.totalTokens)} tokens</span>
+          </div>
           <span class="card-cost">$${r.totalCost.toFixed(2)}</span>
         </div>
         ${bar}
@@ -545,11 +548,32 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
     justify-content: space-between;
     align-items: center;
     margin-bottom: 6px;
+    gap: 8px;
+  }
+  .card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
   }
   .card-name {
     font-weight: 600; font-size: 12px;
-    max-width: 160px; overflow: hidden;
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-total-badge {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
   .card-cost {
     font-weight: 600; font-size: 13px;
