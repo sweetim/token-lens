@@ -86,7 +86,7 @@ src/
 - **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
 - **Webview:** The sidebar uses a webview with scripts enabled and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
-- **Runtime Dependencies:** Only `vscode` and `sql.js` are externalized in esbuild. `sql.js` is a pure WASM package with no native compilation required.
+- **Runtime Dependencies:** `vscode` remains external to the bundle. `sql.js` is loaded at runtime by `dist/extension.js`, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve.
 
 ---
 
@@ -98,7 +98,7 @@ src/
 | `esbuild.js` | Build script — bundles `src/extension.ts` into `dist/extension.js` |
 | `tsconfig.json` | TypeScript config (strict, ES2022, Node16) |
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
-| `.vscodeignore` | Files excluded from the packaged `.vsix` |
+| `.vscodeignore` | Files excluded from the packaged `.vsix`, with `.kilo/**` excluded and `node_modules/sql.js` explicitly re-included for runtime loading |
 | `icons/token-stack-lens.svg` | Current activity bar icon for the sidebar: stacked tokens with a magnifying lens |
 | `icons/token-pulse-ring.svg` | Preview activity bar icon: token with an observability pulse ring |
 | `icons/zai.svg` | Legacy activity bar icon asset |

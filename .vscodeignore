@@ -1,7 +1,10 @@
 .vscode/**
 .vscode-test/**
+.kilo/**
 out/**
 node_modules/**
+!node_modules/sql.js
+!node_modules/sql.js/**
 src/**
 .gitignore
 .yarnrc
