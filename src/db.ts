@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import initSqlJs from "sql.js";
 import type { ProjectTokens, DayTokens, ProjectDayTokens } from "./types.js";
 
@@ -85,7 +85,7 @@ async function getSqlModule(): Promise<SqlJsStatic> {
   if (!sqlModule) {
     sqlModule = await initSqlJs({
       locateFile: (file: string) =>
-        join(dirname(__dirname), "dist", file),
+        join(__dirname, file),
     });
   }
   return sqlModule;
