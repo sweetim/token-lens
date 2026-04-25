@@ -1,31 +1,41 @@
-# Token Usage Info
+<div align="center">
 
-Visualize your LLM provider token usage directly in the VS Code status bar.
+# Token Lens
+
+[![VS Code Version](https://img.shields.io/badge/VS_Code-1.116+-007ACC?style=flat-square&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <img src="docs/images/landing.png" alt="Token Lens overview" width="700">
+</p>
+
+**Never lose track of your LLM spend again.** Real-time token usage right in your status bar, with rich analytics one click away.
+
+</div>
+
+## Features
+
+- **Status bar indicator** — color-coded usage at a glance (normal, warning ≥50%, error ≥80%)
+- **Rich tooltip** — usage bar, percentage, and time until reset
+- **Sidebar analytics** — daily and per-project token breakdown
+- **Auto-refresh** — data updates every 5 minutes
+- **Secure storage** — API key stored via VS Code's SecretStorage
+- **Local timezone** — day grouping uses your local time, not UTC
 
 ## Supported Providers
 
 - [z.ai](https://z.ai)
 
-## Features
-
-- Displays current token usage percentage in the status bar
-- Color-coded status: normal, warning (≥50%), and error (≥80%)
-- Rich tooltip with a one-line z.ai usage bar plus percentage, and time until reset
-- Sidebar with daily and per-project token usage breakdown
-- Auto-refreshes every 5 minutes
-- API key stored securely using VS Code's SecretStorage
-- Day grouping uses local timezone (not UTC)
-
 ## Commands
 
 | Command | Description |
 |---|---|
-| `Token Usage: Set API Key` | Enter your provider API key (stored securely) |
-| `Token Usage: Refresh Token Usage` | Manually refresh token usage data |
+| `TokenLens: Set API Key` | Enter your provider API key (stored securely) |
+| `TokenLens: Refresh` | Manually refresh token usage data |
 
 ## Getting Started
 
-1. Install the extension
+1. Install the extension from the VS Code Marketplace
 2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-3. Run **Token Usage: Set API Key** and enter your API key
-4. Token usage appears in the status bar on the right side
+3. Run **TokenLens: Set API Key** and paste your API key
+4. Token usage appears in the status bar immediately

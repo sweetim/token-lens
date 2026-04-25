@@ -103,7 +103,7 @@ function buildTooltip(data: QuotaResponse["data"]): vscode.MarkdownString {
   }
 
   md.appendMarkdown(`<span style="font-size:13px;"><b>$(spark) Token Lens - zai</b></span>\n\n`);
-  md.appendMarkdown(`<code style="font-size:10px;letter-spacing:-1px;">${bar}</code> | **${usedPct.toFixed(0)}%**\n\n`);
+  md.appendMarkdown(`<code style="font-size:10px;letter-spacing:-1px;">${bar}</code> **${usedPct.toFixed(0)}%**\n\n`);
   if (tokenLimit) {
     md.appendMarkdown(`---\n\n`);
     md.appendMarkdown(`$(clock) Resets **${formatDuration(tokenLimit.nextResetTime)}**\n\n`);

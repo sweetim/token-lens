@@ -623,6 +623,8 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
   }
   .daily-toolbar {
     padding: 10px 10px 0;
+    display: flex;
+    justify-content: flex-end;
   }
   .view-toggle {
     display: inline-flex;
@@ -636,13 +638,16 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
     border: none;
     background: none;
     color: var(--muted);
-    padding: 5px 10px;
+    padding: 5px 7px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .4px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .toggle-icon {
+    width: 16px;
+    height: 16px;
   }
   .view-toggle-button.active {
     color: var(--accent);
@@ -945,8 +950,8 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
     <div class="daily-layout">
       <div class="daily-toolbar">
         <div class="view-toggle" role="tablist" aria-label="Daily view mode">
-          <button class="view-toggle-button active" data-daily-view="cards" type="button">Cards</button>
-          <button class="view-toggle-button" data-daily-view="graph" type="button">Graph</button>
+          <button class="view-toggle-button active" data-daily-view="cards" type="button" aria-label="Cards"><svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" fill="currentColor"/></svg></button>
+          <button class="view-toggle-button" data-daily-view="graph" type="button" aria-label="Graph"><svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14L5.5 8L8.5 10.5L14 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>
       <div class="daily-view active" id="daily-view-cards">
