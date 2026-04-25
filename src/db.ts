@@ -5,6 +5,12 @@ import type { ProjectTokens, DayTokens, ProjectDayTokens } from "./types.js";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 
+const tzOffsetMinutes = -new Date().getTimezoneOffset();
+const tzHours = Math.trunc(tzOffsetMinutes / 60);
+const tzMins = Math.abs(tzOffsetMinutes % 60);
+const tzSign = tzHours >= 0 ? "+" : "-";
+const TZ_MODIFIER = `'unixepoch', '${tzSign}${Math.abs(tzHours)} hours'${tzMins ? `, '${tzSign}${tzMins} minutes'` : ""}`;
+
 const PROJECT_QUERY = `
 SELECT
   REPLACE(p.worktree, '${homedir()}/projects/', '') AS project,
@@ -29,7 +35,7 @@ ORDER BY total_tokens DESC;
 
 const DAY_QUERY = `
 SELECT
-  date(part.time_created / 1000, 'unixepoch') AS day,
+  date(part.time_created / 1000, ${TZ_MODIFIER}) AS day,
   SUM(CAST(json_extract(part.data, '$.tokens.total') AS INTEGER)) AS total_tokens,
   SUM(CAST(json_extract(part.data, '$.tokens.input') AS INTEGER)) AS input_tokens,
   SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens,
@@ -51,7 +57,7 @@ ORDER BY day DESC;
 const PROJECT_DAY_QUERY = `
 SELECT
   REPLACE(p.worktree, '${homedir()}/projects/', '') AS project,
-  date(part.time_created / 1000, 'unixepoch') AS day,
+  date(part.time_created / 1000, ${TZ_MODIFIER}) AS day,
   SUM(CAST(json_extract(part.data, '$.tokens.total') AS INTEGER)) AS total_tokens,
   SUM(CAST(json_extract(part.data, '$.tokens.input') AS INTEGER)) AS input_tokens,
   SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens,

@@ -55,6 +55,19 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Keep Docs in Sync
+
+**When you change code, update the corresponding docs.**
+
+- If you add, remove, or rename a source file, update the file map in `docs/`.
+- If you add, remove, or change a command, endpoint, or export, update the documented API surface.
+- If you add or remove a dependency, update the documented dependency list.
+- If you add or change an environment variable, update the documented env var list.
+- If you add, remove, or modify a type or schema, update the documented type definitions.
+- If you change an execution flow or architecture, update the documented flow description.
+
+The rule: every implementation change must include a corresponding doc change. Don't leave docs stale.
+
 # Coding Rules
 
 - Use `type` instead of `interface` when defining TypeScript types to ensure

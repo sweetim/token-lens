@@ -19,7 +19,7 @@ src/
 ├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel
 ├── html.ts           # Generates the full sidebar HTML (hero stats, project cards, daily virtual list, SVG line charts)
 ├── db.ts             # Queries the local Kilo SQLite database via `sqlite3` CLI
-├── types.ts          # ProjectTokens and DayTokens type definitions
+├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, and QuotaSummary type definitions
 ├── bars.ts           # Stacked bar chart HTML helpers and segment colors
 └── format.ts         # Number/token formatting, HTML escaping, date formatting
 ```
@@ -43,11 +43,12 @@ src/
 2. **Sidebar Panel** (`tokenSidebar.ts` + `html.ts`)
    - Activity bar icon (uses `icons/zai.svg`)
    - Webview with two tabs: **Projects** and **Daily**
+    - **Quota section:** Progress bar showing current quota usage percentage and time until reset (fed by `QuotaSummary` from the z.ai API).
+    - **Hero section:** Summary stats — today's tokens, total tokens, total cost, and total steps across all projects.
     - **Projects tab:** Expandable cards showing per-project token breakdown (input, output, reasoning, cache read/write), cost, step count, session count, and duration. Includes stacked color bar visualization.
     - **Daily tab:** Two sub-views toggled via a Cards/Graph pill switcher:
       - **Cards view:** Virtualized scrollable list of day-by-day usage with horizontal bar charts. Rows support expand/collapse, and the virtual list measures rendered row heights so long lists remain performant even when rows expand.
       - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), and Sessions And Steps. Shows Latest Day, Average/Day, and Peak summary stats.
-   - **Hero section:** Aggregated totals (total tokens, total cost, total steps) across all projects
 
 ### Commands
 
@@ -81,7 +82,7 @@ src/
 ## Key Implementation Details
 
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
-- **DB Queries:** Invokes the `sqlite3` CLI via `child_process.execFile` with `-json` flag, parsing the JSON output. Queries join `part`, `message`, `session`, and `project` tables, filtering on `step-finish` type entries.
+- **DB Queries:** Invokes the `sqlite3` CLI via `child_process.execFile` with `-json` flag, parsing the JSON output. Queries join `part`, `message`, `session` tables; the project and project-day queries additionally join the `project` table. All queries filter on `step-finish` type entries. Day grouping uses the local timezone offset (computed from `new Date().getTimezoneOffset()`) rather than UTC, so daily totals align with the user's actual calendar day.
 - **Webview:** The sidebar uses a webview with scripts enabled and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
 - **No External Runtime Dependencies:** The extension bundle has zero runtime npm dependencies — only `vscode` is externalized.

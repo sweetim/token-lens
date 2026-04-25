@@ -160,7 +160,7 @@ function buildQuotaSection(quotaSummary: QuotaSummary | undefined): string {
           ${Z_AI_LOGO_SVG}
           <span class="quota-title">Quota Usage</span>
         </div>
-        <span class="quota-reset-badge">reset ${escapeHtml(resetDurationLabel)}</span>
+        <span class="quota-reset-badge">reset <span class="quota-reset-duration">${escapeHtml(resetDurationLabel)}</span></span>
       </div>
       <div class="quota-progress-section">
         <div class="quota-progress-header">
@@ -410,6 +410,10 @@ function getHtml(projects: ProjectTokens[], days: DayTokens[], projectDays: Proj
     background: var(--border);
     white-space: nowrap;
     flex: 0 0 auto;
+  }
+  .quota-reset-duration {
+    font-weight: 700;
+    color: #fff;
   }
   .hero-grid {
     display: grid;
