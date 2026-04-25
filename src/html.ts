@@ -51,7 +51,7 @@ function buildModelCostHtmlSync(modelCosts: ModelCost[], project: string, modelD
     .map(({ modelId, cost }) => `<div class="model-cost-row"><span class="model-cost-id">${escapeHtml(modelId)}</span><span class="model-cost-value">$${cost.toFixed(2)}</span></div>`)
     .join("");
 
-  return `<div class="model-cost-list"><div class="model-cost-header">Model Costs</div>${rows}</div>`;
+  return `<div class="model-cost-list" data-project="${escapeHtml(project)}"><div class="model-cost-header">Model Cost Comparison</div>${rows}</div>`;
 }
 
 function buildGlobalCostTab(
@@ -98,7 +98,7 @@ function buildGlobalCostTab(
   const rows = entries
     .map(
       ({ modelId, cost, created }) =>
-        `<div class="model-cost-row" data-provider="${escapeHtml(modelId.split("/")[0])}" data-cost="${cost}" data-created="${created}"><span class="model-cost-id">${escapeHtml(modelId)}</span><span class="model-cost-value">$${cost.toFixed(2)}</span></div>`,
+        `<div class="model-cost-row" data-provider="${escapeHtml(modelId.split("/")[0])}" data-cost="${cost}" data-created="${created}" data-model-id="${escapeHtml(modelId)}"><span class="model-cost-id">${escapeHtml(modelId)}</span><span class="model-cost-value">$${cost.toFixed(2)}</span></div>`,
     )
     .join("");
 
@@ -112,7 +112,11 @@ function buildGlobalCostTab(
       <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.reasoningTokens)}</span><span class="cost-token-label">Reasoning</span></div>
       <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.cacheRead)}</span><span class="cost-token-label">Cache Read</span></div>
     </div>
-    <div class="cost-toolbar">
+    <button class="cost-filter-toggle" data-cost-filter-toggle type="button" aria-expanded="true">
+      <svg class="cost-filter-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Filters
+    </button>
+    <div class="cost-toolbar" data-cost-filter-body>
       <div class="cost-provider-filters">${filterButtons}</div>
       <div class="cost-toolbar-row">
         <div class="cost-sort">
@@ -359,6 +363,34 @@ async function getHtml(
 
   const modelData = await fetchModelData();
 
+  const now = Date.now();
+  const projectModelIdsJson = JSON.stringify(
+    Object.fromEntries(projects.map((r) => {
+      const projectCosts = modelCosts.filter((m) => m.project === r.project);
+      const ids = new Set<string>();
+      for (const m of projectCosts) {
+        const openRouterId = toOpenRouterModelId(m.provider, m.model);
+        const slashProvider = openRouterId.split("/")[0];
+        if (!ALLOWED_PROVIDERS.has(slashProvider)) {
+          continue;
+        }
+        const createdDate = modelData.createdDates[openRouterId];
+        if (!createdDate || (now - createdDate * 1000) > THREE_MONTHS_MS) {
+          continue;
+        }
+        ids.add(openRouterId);
+      }
+      return [r.project, [...ids]];
+    })),
+  );
+  const projectTokenBreakdownsJson = JSON.stringify(
+    Object.fromEntries(projects.map((r) => [
+      r.project,
+      { inputTokens: r.inputTokens, outputTokens: r.outputTokens, reasoningTokens: r.reasoningTokens, cacheRead: r.cacheRead },
+    ])),
+  );
+  const modelPricingJson = JSON.stringify(modelData.pricing);
+
   const projectCards = projects
     .map((r, index) => {
       const bar = stackedBarHtml(r.totalTokens, [
@@ -509,6 +541,9 @@ async function getHtml(
     sharedDailyChartDayDataJson,
     projectChartDataSetsJson,
     defaultTabIsDaily: defaultTab === "daily",
+    modelPricingJson,
+    projectTokenBreakdownsJson,
+    projectModelIdsJson,
   });
 
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview-client.js"));

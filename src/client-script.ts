@@ -6,6 +6,9 @@ type ClientScriptParams = {
   sharedDailyChartDayDataJson: string;
   projectChartDataSetsJson: string;
   defaultTabIsDaily: boolean;
+  modelPricingJson: string;
+  projectTokenBreakdownsJson: string;
+  projectModelIdsJson: string;
 };
 
 function getDataScript(params: ClientScriptParams): string {
@@ -17,6 +20,9 @@ function getDataScript(params: ClientScriptParams): string {
     dailyChartData: JSON.parse(params.sharedDailyChartDayDataJson),
     projectChartDataSets: JSON.parse(params.projectChartDataSetsJson),
     defaultTabIsDaily: params.defaultTabIsDaily,
+    modelPricing: JSON.parse(params.modelPricingJson),
+    projectTokenBreakdowns: JSON.parse(params.projectTokenBreakdownsJson),
+    projectModelIds: JSON.parse(params.projectModelIdsJson),
   };
   return `window.__TOKEN_LENS_DATA__ = ${JSON.stringify(data)};`;
 }

@@ -56,6 +56,9 @@ type WebviewData = {
   dailyChartData: ChartDayItem[];
   projectChartDataSets: Record<string, ChartDayItem[]>;
   defaultTabIsDaily: boolean;
+  modelPricing: Record<string, { prompt: number; completion: number; cacheRead: number }>;
+  projectTokenBreakdowns: Record<string, { inputTokens: number; outputTokens: number; reasoningTokens: number; cacheRead: number }>;
+  projectModelIds: Record<string, string[]>;
 };
 
 declare const __TOKEN_LENS_DATA__: WebviewData;
@@ -653,6 +656,7 @@ type CostFilterState = {
   providers: string[];
   sort: "asc" | "desc";
   ageFilter: boolean;
+  collapsed: boolean;
 };
 
 function loadCostFilterState(): CostFilterState {
@@ -664,10 +668,11 @@ function loadCostFilterState(): CostFilterState {
         providers: Array.isArray(parsed.providers) ? parsed.providers : [],
         sort: parsed.sort === "desc" ? "desc" : "asc",
         ageFilter: !!parsed.ageFilter,
+        collapsed: !!parsed.collapsed,
       };
     }
   } catch { /* ignore */ }
-  return { providers: [], sort: "asc", ageFilter: false };
+  return { providers: [], sort: "asc", ageFilter: false, collapsed: false };
 }
 
 function saveCostFilterState(): void {
@@ -675,6 +680,7 @@ function saveCostFilterState(): void {
     providers: [...activeProviders],
     sort: currentSortOrder,
     ageFilter: ageFilterActive,
+    collapsed: filtersCollapsed,
   };
   try {
     localStorage.setItem(COST_STORAGE_KEY, JSON.stringify(state));
@@ -684,6 +690,20 @@ function saveCostFilterState(): void {
 const activeProviders = new Set<string>();
 let ageFilterActive = false;
 let currentSortOrder: "asc" | "desc" = "asc";
+let filtersCollapsed = false;
+
+function setCostFilterCollapsed(collapsed: boolean): void {
+  filtersCollapsed = collapsed;
+  const toggle = document.querySelector<HTMLElement>("[data-cost-filter-toggle]");
+  const body = document.querySelector<HTMLElement>("[data-cost-filter-body]");
+  if (toggle) {
+    toggle.classList.toggle("collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+  if (body) {
+    body.classList.toggle("hidden", collapsed);
+  }
+}
 
 function applyCostFilters(): void {
   const showAllProviders = activeProviders.size === 0;
@@ -744,8 +764,18 @@ function restoreCostFilterState(): void {
     ageToggle.classList.toggle("active", ageFilterActive);
   }
 
+  setCostFilterCollapsed(saved.collapsed);
+
   applyCostSort(saved.sort);
   applyCostFilters();
+}
+
+const costFilterToggle = document.querySelector("[data-cost-filter-toggle]");
+if (costFilterToggle) {
+  costFilterToggle.addEventListener("click", () => {
+    setCostFilterCollapsed(!filtersCollapsed);
+    saveCostFilterState();
+  });
 }
 
 document.querySelectorAll(".cost-provider-filter").forEach((button) => {
@@ -797,3 +827,95 @@ document.querySelectorAll(".cost-sort-button").forEach((button) => {
 });
 
 restoreCostFilterState();
+
+const SAVED_MODELS_KEY = "token-lens-saved-models";
+
+function getSavedModels(): string[] {
+  try {
+    const raw = localStorage.getItem(SAVED_MODELS_KEY);
+    if (raw) return JSON.parse(raw) as string[];
+  } catch { /* ignore */ }
+  return [];
+}
+
+function setSavedModels(models: string[]): void {
+  try {
+    localStorage.setItem(SAVED_MODELS_KEY, JSON.stringify(models));
+  } catch { /* ignore */ }
+}
+
+function computeModelCostRows(modelIds: string[], tokens: { inputTokens: number; outputTokens: number; reasoningTokens: number; cacheRead: number }): string {
+  const computed = modelIds
+    .map((modelId) => {
+      const pricing = DATA.modelPricing[modelId];
+      if (!pricing) return null;
+      const cost = tokens.inputTokens * pricing.prompt
+        + tokens.outputTokens * pricing.completion
+        + tokens.reasoningTokens * pricing.completion
+        + tokens.cacheRead * pricing.cacheRead;
+      return { modelId, cost };
+    })
+    .filter((r): r is { modelId: string; cost: number } => r !== null && r.cost > 0)
+    .sort((a, b) => b.cost - a.cost);
+  return computed.map(({ modelId, cost }) =>
+    '<div class="model-cost-row"><span class="model-cost-id">' + escapeHtmlText(modelId) + '</span><span class="model-cost-value">$' + cost.toFixed(2) + '</span></div>'
+  ).join("");
+}
+
+function renderProjectModelCosts(): void {
+  const savedModels = getSavedModels();
+
+  document.querySelectorAll<HTMLElement>(".model-cost-list[data-project]").forEach((list) => {
+    const project = list.dataset.project;
+    if (!project) return;
+
+    const tokens = DATA.projectTokenBreakdowns[project];
+    if (!tokens) return;
+
+    const modelIds = savedModels.length > 0 ? savedModels : (DATA.projectModelIds[project] ?? []);
+    const rowsHtml = computeModelCostRows(modelIds, tokens);
+
+    list.querySelectorAll(".model-cost-row").forEach((r) => r.remove());
+    const header = list.querySelector(".model-cost-header");
+    if (header) {
+      header.insertAdjacentHTML("afterend", rowsHtml);
+    }
+  });
+}
+
+function applySavedModelState(): void {
+  const savedModels = new Set(getSavedModels());
+  document.querySelectorAll<HTMLElement>("#cost-model-list .model-cost-row").forEach((row) => {
+    const modelId = row.dataset.modelId ?? "";
+    row.classList.toggle("saved", savedModels.has(modelId));
+  });
+}
+
+const costModelList = document.getElementById("cost-model-list");
+if (costModelList) {
+  costModelList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const row = target.closest("#cost-model-list .model-cost-row");
+    if (!row) return;
+
+    const modelId = (row as HTMLElement).dataset.modelId;
+    if (!modelId) return;
+
+    const saved = getSavedModels();
+    const index = saved.indexOf(modelId);
+    if (index >= 0) {
+      saved.splice(index, 1);
+    } else {
+      saved.push(modelId);
+    }
+    setSavedModels(saved);
+
+    applySavedModelState();
+    renderProjectModelCosts();
+  });
+}
+
+applySavedModelState();
+renderProjectModelCosts();
