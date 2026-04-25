@@ -18,10 +18,11 @@ src/
 ├── extension.ts      # Extension entry point — status bar item, commands, timer; defines QuotaResponse/Limit/UsageDetail inline types
 ├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel
 ├── html.ts           # Generates the full sidebar HTML (hero stats, project cards, daily virtual list, SVG line charts)
-├── db.ts             # Queries the local Kilo SQLite database via `sqlite3` CLI
+├── db.ts             # Queries the local Kilo SQLite database via `sql.js` npm package (pure WASM, no native modules)
 ├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, and QuotaSummary type definitions
 ├── bars.ts           # Stacked bar chart HTML helpers and segment colors
-└── format.ts         # Number/token formatting, HTML escaping, date formatting
+├── format.ts         # Number/token formatting, HTML escaping, date formatting
+└── sql.js.d.ts       # Custom type declarations for the sql.js WASM module
 ```
 
 ### Data Sources
@@ -36,7 +37,7 @@ src/
 1. **Status Bar Item** (`extension.ts`)
    - Shows current token usage percentage (e.g. `$(zap) 42%`)
    - Color-coded background: normal → warning (≥50%) → error (≥80%)
-   - Rich Markdown tooltip with gradient usage bar, percentage, and time until reset
+   - Rich Markdown tooltip with `TokenLens - zai`, z.ai token totals, a gradient usage bar, and time until reset
    - Auto-refreshes every 5 minutes
    - Falls back to "TokenLens ?" with prompt to set API key if none is stored
 
@@ -75,17 +76,17 @@ src/
 
 - Node.js (with npm)
 - VS Code ^1.116.0
-- `sqlite3` CLI (required at runtime for local DB queries)
 
 ---
 
 ## Key Implementation Details
 
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
-- **DB Queries:** Invokes the `sqlite3` CLI via `child_process.execFile` with `-json` flag, parsing the JSON output. Queries join `part`, `message`, `session` tables; the project and project-day queries additionally join the `project` table. All queries filter on `step-finish` type entries. Day grouping uses the local timezone offset (computed from `new Date().getTimezoneOffset()`) rather than UTC, so daily totals align with the user's actual calendar day.
+- **DB Queries:** Uses the `sql.js` npm package (pure WASM SQLite, no native modules) to query the local SQLite database. The database is loaded into memory from disk and queries are executed synchronously against the in-memory copy. Queries join `part`, `message`, `session` tables; the project and project-day queries additionally join the `project` table. All queries filter on `step-finish` type entries. Day grouping uses the local timezone offset (computed from `new Date().getTimezoneOffset()`) rather than UTC, so daily totals align with the user's actual calendar day.
+- **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
 - **Webview:** The sidebar uses a webview with scripts enabled and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
-- **No External Runtime Dependencies:** The extension bundle has zero runtime npm dependencies — only `vscode` is externalized.
+- **Runtime Dependencies:** Only `vscode` and `sql.js` are externalized in esbuild. `sql.js` is a pure WASM package with no native compilation required.
 
 ---
 
@@ -99,4 +100,5 @@ src/
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
 | `.vscodeignore` | Files excluded from the packaged `.vsix` |
 | `icons/zai.svg` | Activity bar icon for the sidebar |
+| `icons/logo.png` | Extension marketplace icon (used in `package.json` `"icon"`) |
 | `CHANGELOG.md` | Release notes (currently unreleased) |

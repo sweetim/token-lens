@@ -1,6 +1,7 @@
-import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import initSqlJs from "sql.js";
 import type { ProjectTokens, DayTokens, ProjectDayTokens } from "./types.js";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
@@ -77,25 +78,37 @@ GROUP BY p.worktree, day
 ORDER BY day DESC, total_tokens DESC;
 `;
 
-function execQuery<T>(query: string, mapRow: (r: Record<string, unknown>) => T): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    execFile("sqlite3", [DB_PATH, "-json", query], { timeout: 10000 }, (err, stdout) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      if (!stdout.trim()) {
-        resolve([]);
-        return;
-      }
-      try {
-        const rows = JSON.parse(stdout) as Array<Record<string, unknown>>;
-        resolve(rows.map(mapRow));
-      } catch (parseErr) {
-        reject(parseErr);
-      }
+let sqlModule: SqlJsStatic | null = null;
+type SqlJsStatic = Awaited<ReturnType<typeof initSqlJs>>;
+
+async function getSqlModule(): Promise<SqlJsStatic> {
+  if (!sqlModule) {
+    sqlModule = await initSqlJs({
+      locateFile: (file: string) =>
+        join(dirname(__dirname), "node_modules", "sql.js", "dist", file),
     });
-  });
+  }
+  return sqlModule;
+}
+
+async function execQuery<T>(query: string, mapRow: (r: Record<string, unknown>) => T): Promise<T[]> {
+  const SQL = await getSqlModule();
+  const buf = readFileSync(DB_PATH);
+  const db = new SQL.Database(buf);
+  try {
+    const result = db.exec(query);
+    if (result.length === 0) {
+      return [];
+    }
+    const columns = result[0].columns;
+    return result[0].values.map((row) => {
+      const obj: Record<string, unknown> = {};
+      columns.forEach((col, i) => { obj[col] = row[i]; });
+      return mapRow(obj);
+    });
+  } finally {
+    db.close();
+  }
 }
 
 function queryProjectTokens(): Promise<ProjectTokens[]> {

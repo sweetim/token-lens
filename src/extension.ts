@@ -87,9 +87,9 @@ function buildTooltip(data: QuotaResponse["data"]): vscode.MarkdownString {
   md.supportHtml = true;
   md.isTrusted = true;
 
+  const quotaSummary = buildQuotaSummary(data);
   const tokenLimit = data.limits.find((l) => l.type === "TOKENS_LIMIT");
   const usedPct = tokenLimit?.percentage ?? 0;
-  const remainingPct = 100 - usedPct;
 
   const gradientColors = [
     "#4ec9b0", "#5ec47a", "#7ebc4a", "#a0b030",
@@ -104,10 +104,14 @@ function buildTooltip(data: QuotaResponse["data"]): vscode.MarkdownString {
     bar += `<span style="color:${color};">█</span>`;
   }
 
-  md.appendMarkdown(`<span style="font-size:13px;"><b>$(spark) TokenLens</b></span>\n\n`);
-  md.appendMarkdown(`<span style="color:${usedColor};font-size:18px;font-weight:bold;">${usedPct.toFixed(1)}%</span>\n\n`);
+  md.appendMarkdown(`<span style="font-size:13px;"><b>$(spark) TokenLens - zai</b></span>\n\n`);
+  if (quotaSummary) {
+    md.appendMarkdown(`Usage: **${quotaSummary.usedTokens.toLocaleString()} / ${quotaSummary.limitTokens.toLocaleString()} tokens**\n\n`);
+  }
   md.appendMarkdown(`<code style="font-size:10px;letter-spacing:-1px;">${bar}</code>\n\n`);
-  md.appendMarkdown(`Remaining: **${remainingPct.toFixed(1)}%**\n\n`);
+  if (quotaSummary) {
+    md.appendMarkdown(`Remaining: **${quotaSummary.remainingTokens.toLocaleString()} tokens**\n\n`);
+  }
   if (tokenLimit) {
     md.appendMarkdown(`---\n\n`);
     md.appendMarkdown(`$(clock) Resets **${formatDuration(tokenLimit.nextResetTime)}**\n\n`);
