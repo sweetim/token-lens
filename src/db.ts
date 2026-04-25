@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import initSqlJs from "sql.js";
-import type { ProjectTokens, DayTokens, ProjectDayTokens } from "./types.js";
+import type { ProjectTokens, DayTokens, ProjectDayTokens, ModelCost, ModelUsage } from "./types.js";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 
@@ -78,6 +78,55 @@ GROUP BY p.worktree, day
 ORDER BY day DESC, total_tokens DESC;
 `;
 
+const MODEL_COST_QUERY = `
+SELECT
+  REPLACE(p.worktree, '${homedir()}/projects/', '') AS project,
+  json_extract(message.data, '$.providerID') AS provider,
+  json_extract(message.data, '$.modelID') AS model,
+  SUM(CAST(json_extract(part.data, '$.tokens.input') AS INTEGER)) AS input_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens
+FROM part
+JOIN message ON message.id = part.message_id
+JOIN session s ON s.id = message.session_id
+JOIN project p ON p.id = s.project_id
+WHERE json_extract(part.data, '$.type') = 'step-finish'
+GROUP BY p.worktree, provider, model
+ORDER BY input_tokens DESC;
+`;
+
+const PROJECT_MODEL_QUERY = `
+SELECT
+  REPLACE(p.worktree, '${homedir()}/projects/', '') AS project,
+  json_extract(message.data, '$.providerID') AS provider,
+  json_extract(message.data, '$.modelID') AS model,
+  COUNT(*) AS steps,
+  SUM(CAST(json_extract(part.data, '$.tokens.total') AS INTEGER)) AS total_tokens,
+  ROUND(SUM(CAST(json_extract(part.data, '$.cost') AS REAL)), 4) AS total_cost
+FROM part
+JOIN message ON message.id = part.message_id
+JOIN session s ON s.id = message.session_id
+JOIN project p ON p.id = s.project_id
+WHERE json_extract(part.data, '$.type') = 'step-finish'
+GROUP BY p.worktree, provider, model
+ORDER BY total_cost DESC;
+`;
+
+const DAY_MODEL_QUERY = `
+SELECT
+  date(part.time_created / 1000, ${TZ_MODIFIER}) AS day,
+  json_extract(message.data, '$.providerID') AS provider,
+  json_extract(message.data, '$.modelID') AS model,
+  COUNT(*) AS steps,
+  SUM(CAST(json_extract(part.data, '$.tokens.total') AS INTEGER)) AS total_tokens,
+  ROUND(SUM(CAST(json_extract(part.data, '$.cost') AS REAL)), 4) AS total_cost
+FROM part
+JOIN message ON message.id = part.message_id
+JOIN session s ON s.id = message.session_id
+WHERE json_extract(part.data, '$.type') = 'step-finish'
+GROUP BY day, provider, model
+ORDER BY total_cost DESC;
+`;
+
 let sqlModule: SqlJsStatic | null = null;
 type SqlJsStatic = Awaited<ReturnType<typeof initSqlJs>>;
 
@@ -124,6 +173,7 @@ function queryProjectTokens(): Promise<ProjectTokens[]> {
     steps: Number(r.steps) || 0,
     sessions: Number(r.sessions) || 0,
     duration: Number(r.duration) || 0,
+    models: [],
   }));
 }
 
@@ -140,6 +190,7 @@ function queryDayTokens(): Promise<DayTokens[]> {
     steps: Number(r.steps) || 0,
     sessions: Number(r.sessions) || 0,
     duration: Number(r.duration) || 0,
+    models: [],
   }));
 }
 
@@ -160,4 +211,54 @@ function queryProjectDayTokens(): Promise<ProjectDayTokens[]> {
   }));
 }
 
-export { queryProjectTokens, queryDayTokens, queryProjectDayTokens };
+function queryModelCosts(): Promise<ModelCost[]> {
+  return execQuery(MODEL_COST_QUERY, (r) => ({
+    project: String(r.project ?? ""),
+    provider: String(r.provider ?? ""),
+    model: String(r.model ?? ""),
+    inputTokens: Number(r.input_tokens) || 0,
+    outputTokens: Number(r.output_tokens) || 0,
+  }));
+}
+
+type ProjectModelRow = {
+  project: string;
+  provider: string;
+  model: string;
+  steps: number;
+  totalTokens: number;
+  totalCost: number;
+};
+
+type DayModelRow = {
+  day: string;
+  provider: string;
+  model: string;
+  steps: number;
+  totalTokens: number;
+  totalCost: number;
+};
+
+function queryProjectModels(): Promise<ProjectModelRow[]> {
+  return execQuery(PROJECT_MODEL_QUERY, (r) => ({
+    project: String(r.project ?? ""),
+    provider: String(r.provider ?? ""),
+    model: String(r.model ?? ""),
+    steps: Number(r.steps) || 0,
+    totalTokens: Number(r.total_tokens) || 0,
+    totalCost: Number(r.total_cost) || 0,
+  }));
+}
+
+function queryDayModels(): Promise<DayModelRow[]> {
+  return execQuery(DAY_MODEL_QUERY, (r) => ({
+    day: String(r.day ?? ""),
+    provider: String(r.provider ?? ""),
+    model: String(r.model ?? ""),
+    steps: Number(r.steps) || 0,
+    totalTokens: Number(r.total_tokens) || 0,
+    totalCost: Number(r.total_cost) || 0,
+  }));
+}
+
+export { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels };

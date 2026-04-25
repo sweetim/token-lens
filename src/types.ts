@@ -1,3 +1,11 @@
+type ModelUsage = {
+  model: string;
+  provider: string;
+  steps: number;
+  totalTokens: number;
+  totalCost: number;
+};
+
 type ProjectTokens = {
   project: string;
   totalTokens: number;
@@ -10,6 +18,7 @@ type ProjectTokens = {
   steps: number;
   sessions: number;
   duration: number;
+  models: ModelUsage[];
 };
 
 type DayTokens = {
@@ -24,6 +33,7 @@ type DayTokens = {
   steps: number;
   sessions: number;
   duration: number;
+  models: ModelUsage[];
 };
 
 type ProjectDayTokens = {
@@ -41,6 +51,14 @@ type ProjectDayTokens = {
   duration: number;
 };
 
+type ModelCost = {
+  project: string;
+  provider: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+};
+
 type QuotaSummary = {
   usedTokens: number;
   limitTokens: number;
@@ -52,4 +70,4 @@ type QuotaSummary = {
   resetDurationLabel: string;
 };
 
-export { ProjectTokens, DayTokens, ProjectDayTokens, QuotaSummary };
+export { ProjectTokens, DayTokens, ProjectDayTokens, ModelCost, ModelUsage, QuotaSummary };
