@@ -17,7 +17,8 @@
     "cost",
     "analytics",
     "monitor",
-    "dashboard"
+    "dashboard",
+    "tokenlens"
   ],
   "homepage": "https://github.com/sweetim/token-lens#readme",
   "bugs": {
