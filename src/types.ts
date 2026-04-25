@@ -57,6 +57,8 @@ type ModelCost = {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  reasoningTokens: number;
+  cacheRead: number;
 };
 
 type QuotaSummary = {

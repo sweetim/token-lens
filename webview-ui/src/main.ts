@@ -646,3 +646,154 @@ document.querySelectorAll(".tab").forEach((tab) => {
     if ((tab as HTMLElement).dataset.tab === "daily" && activeDailyView === "cards") scheduleRender();
   });
 });
+
+const COST_STORAGE_KEY = "token-lens-cost-filters";
+
+type CostFilterState = {
+  providers: string[];
+  sort: "asc" | "desc";
+  ageFilter: boolean;
+};
+
+function loadCostFilterState(): CostFilterState {
+  try {
+    const raw = localStorage.getItem(COST_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CostFilterState>;
+      return {
+        providers: Array.isArray(parsed.providers) ? parsed.providers : [],
+        sort: parsed.sort === "desc" ? "desc" : "asc",
+        ageFilter: !!parsed.ageFilter,
+      };
+    }
+  } catch { /* ignore */ }
+  return { providers: [], sort: "asc", ageFilter: false };
+}
+
+function saveCostFilterState(): void {
+  const state: CostFilterState = {
+    providers: [...activeProviders],
+    sort: currentSortOrder,
+    ageFilter: ageFilterActive,
+  };
+  try {
+    localStorage.setItem(COST_STORAGE_KEY, JSON.stringify(state));
+  } catch { /* ignore */ }
+}
+
+const activeProviders = new Set<string>();
+let ageFilterActive = false;
+let currentSortOrder: "asc" | "desc" = "asc";
+
+function applyCostFilters(): void {
+  const showAllProviders = activeProviders.size === 0;
+  const list = document.getElementById("cost-model-list");
+  const threeMonthsAgo = list ? Number(list.dataset.threeMonthsAgo) || 0 : 0;
+
+  document.querySelectorAll<HTMLElement>("#cost-model-list .model-cost-row").forEach((row) => {
+    const providerOk = showAllProviders || activeProviders.has(row.dataset.provider ?? "");
+    const ageOk = !ageFilterActive || (Number(row.dataset.created) || 0) >= threeMonthsAgo;
+    row.style.display = providerOk && ageOk ? "" : "none";
+  });
+}
+
+function applyCostSort(order: "asc" | "desc"): void {
+  currentSortOrder = order;
+
+  document.querySelectorAll(".cost-sort-button").forEach((b) => b.classList.remove("active"));
+  const btn = document.querySelector(`.cost-sort-button[data-cost-sort="${order}"]`);
+  if (btn) btn.classList.add("active");
+
+  const list = document.getElementById("cost-model-list");
+  if (!list) return;
+  const header = list.querySelector(".model-cost-header");
+  const rows = Array.from(list.querySelectorAll<HTMLElement>(".model-cost-row"));
+  rows.sort((a, b) => {
+    const costA = Number(a.dataset.cost) || 0;
+    const costB = Number(b.dataset.cost) || 0;
+    return order === "asc" ? costA - costB : costB - costA;
+  });
+  for (const row of rows) {
+    list.appendChild(row);
+  }
+  if (header) {
+    list.insertBefore(header, list.firstChild);
+  }
+}
+
+function restoreCostFilterState(): void {
+  const saved = loadCostFilterState();
+
+  activeProviders.clear();
+  for (const p of saved.providers) {
+    activeProviders.add(p);
+  }
+
+  if (activeProviders.size > 0) {
+    document.querySelector(".cost-provider-filter[data-cost-provider=\"all\"]")?.classList.remove("active");
+    document.querySelectorAll<HTMLElement>(".cost-provider-filter").forEach((button) => {
+      if (button.dataset.costProvider !== "all") {
+        button.classList.toggle("active", activeProviders.has(button.dataset.costProvider ?? ""));
+      }
+    });
+  }
+
+  ageFilterActive = saved.ageFilter;
+  const ageToggle = document.querySelector("[data-cost-age-toggle]");
+  if (ageToggle) {
+    ageToggle.classList.toggle("active", ageFilterActive);
+  }
+
+  applyCostSort(saved.sort);
+  applyCostFilters();
+}
+
+document.querySelectorAll(".cost-provider-filter").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!(button instanceof HTMLElement)) return;
+    const provider = button.dataset.costProvider ?? "all";
+
+    if (provider === "all") {
+      activeProviders.clear();
+      document.querySelectorAll(".cost-provider-filter").forEach((b) => b.classList.remove("active"));
+      button.classList.add("active");
+    } else {
+      document.querySelector(".cost-provider-filter[data-cost-provider=\"all\"]")?.classList.remove("active");
+      if (activeProviders.has(provider)) {
+        activeProviders.delete(provider);
+        button.classList.remove("active");
+      } else {
+        activeProviders.add(provider);
+        button.classList.add("active");
+      }
+      if (activeProviders.size === 0) {
+        document.querySelector(".cost-provider-filter[data-cost-provider=\"all\"]")?.classList.add("active");
+      }
+    }
+
+    applyCostFilters();
+    saveCostFilterState();
+  });
+});
+
+const ageToggle = document.querySelector("[data-cost-age-toggle]");
+if (ageToggle) {
+  ageToggle.addEventListener("click", () => {
+    ageFilterActive = !ageFilterActive;
+    ageToggle.classList.toggle("active", ageFilterActive);
+    applyCostFilters();
+    saveCostFilterState();
+  });
+}
+
+document.querySelectorAll(".cost-sort-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!(button instanceof HTMLElement)) return;
+    const order = button.dataset.costSort === "desc" ? "desc" : "asc";
+    applyCostSort(order);
+    applyCostFilters();
+    saveCostFilterState();
+  });
+});
+
+restoreCostFilterState();

@@ -7,16 +7,14 @@ import { STYLES } from "./styles.js";
 import * as vscode from "vscode";
 import { getDataScript } from "./client-script.js";
 
-async function buildModelCostHtml(modelCosts: ModelCost[], project: string): Promise<string> {
+function buildModelCostHtmlSync(modelCosts: ModelCost[], project: string, modelData: ModelData, projectTokens: { inputTokens: number; outputTokens: number; reasoningTokens: number; cacheRead: number }): string {
   const now = Date.now();
   const projectCosts = modelCosts.filter((m) => m.project === project);
   if (projectCosts.length === 0) {
     return "";
   }
 
-  const modelData = await fetchModelData();
-
-  const aggregated = new Map<string, { inputTokens: number; outputTokens: number }>();
+  const modelIds = new Set<string>();
   for (const m of projectCosts) {
     const openRouterId = toOpenRouterModelId(m.provider, m.model);
     const slashProvider = openRouterId.split("/")[0];
@@ -27,22 +25,19 @@ async function buildModelCostHtml(modelCosts: ModelCost[], project: string): Pro
     if (!createdDate || (now - createdDate * 1000) > THREE_MONTHS_MS) {
       continue;
     }
-    const existing = aggregated.get(openRouterId);
-    if (existing) {
-      existing.inputTokens += m.inputTokens;
-      existing.outputTokens += m.outputTokens;
-    } else {
-      aggregated.set(openRouterId, { inputTokens: m.inputTokens, outputTokens: m.outputTokens });
-    }
+    modelIds.add(openRouterId);
   }
 
-  const computed = [...aggregated.entries()]
-    .map(([modelId, tokens]) => {
+  const computed = [...modelIds]
+    .map((modelId) => {
       const pricing = modelData.pricing[modelId];
       if (!pricing) {
         return null;
       }
-      const cost = (tokens.inputTokens * pricing.prompt) + (tokens.outputTokens * pricing.completion);
+      const cost = (projectTokens.inputTokens * pricing.prompt)
+        + (projectTokens.outputTokens * pricing.completion)
+        + (projectTokens.reasoningTokens * pricing.completion)
+        + (projectTokens.cacheRead * pricing.cacheRead);
       return { modelId, cost };
     })
     .filter((r): r is { modelId: string; cost: number } => r !== null && r.cost > 0)
@@ -57,6 +52,78 @@ async function buildModelCostHtml(modelCosts: ModelCost[], project: string): Pro
     .join("");
 
   return `<div class="model-cost-list"><div class="model-cost-header">Model Costs</div>${rows}</div>`;
+}
+
+function buildGlobalCostTab(
+  grandTokens: { inputTokens: number; outputTokens: number; reasoningTokens: number; cacheRead: number },
+  modelData: ModelData,
+): string {
+  const now = Date.now();
+  const threeMonthsAgo = (now - THREE_MONTHS_MS) / 1000;
+
+  type CostEntry = { modelId: string; cost: number; created: number };
+
+  const entries: CostEntry[] = [];
+
+  for (const [modelId, pricing] of Object.entries(modelData.pricing)) {
+    const cost =
+      grandTokens.inputTokens * pricing.prompt
+      + grandTokens.outputTokens * pricing.completion
+      + grandTokens.reasoningTokens * pricing.completion
+      + grandTokens.cacheRead * pricing.cacheRead;
+
+    if (cost <= 0) {
+      continue;
+    }
+
+    entries.push({ modelId, cost, created: modelData.createdDates[modelId] ?? 0 });
+  }
+
+  if (entries.length === 0) {
+    return '<p class="empty">No model pricing data available.</p>';
+  }
+
+  entries.sort((a, b) => a.cost - b.cost);
+
+  const providers = [...new Set(entries.map((e) => e.modelId.split("/")[0]))].sort();
+
+  const filterButtons = [
+    `<button class="cost-provider-filter active" data-cost-provider="all" type="button">All</button>`,
+    ...providers.map(
+      (p) =>
+        `<button class="cost-provider-filter" data-cost-provider="${escapeHtml(p)}" type="button">${escapeHtml(p)}</button>`,
+    ),
+  ].join("");
+
+  const rows = entries
+    .map(
+      ({ modelId, cost, created }) =>
+        `<div class="model-cost-row" data-provider="${escapeHtml(modelId.split("/")[0])}" data-cost="${cost}" data-created="${created}"><span class="model-cost-id">${escapeHtml(modelId)}</span><span class="model-cost-value">$${cost.toFixed(2)}</span></div>`,
+    )
+    .join("");
+
+  const totalTokens = grandTokens.inputTokens + grandTokens.outputTokens + grandTokens.reasoningTokens + grandTokens.cacheRead;
+
+  return `<div class="cost-tab-inner">
+    <div class="cost-token-summary">
+      <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(totalTokens)}</span><span class="cost-token-label">Total Tokens</span></div>
+      <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.inputTokens)}</span><span class="cost-token-label">Input</span></div>
+      <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.outputTokens)}</span><span class="cost-token-label">Output</span></div>
+      <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.reasoningTokens)}</span><span class="cost-token-label">Reasoning</span></div>
+      <div class="cost-token-stat"><span class="cost-token-value">${formatTokens(grandTokens.cacheRead)}</span><span class="cost-token-label">Cache Read</span></div>
+    </div>
+    <div class="cost-toolbar">
+      <div class="cost-provider-filters">${filterButtons}</div>
+      <div class="cost-toolbar-row">
+        <div class="cost-sort">
+          <button class="cost-sort-button active" data-cost-sort="asc" type="button">Low → High</button>
+          <button class="cost-sort-button" data-cost-sort="desc" type="button">High → Low</button>
+        </div>
+        <button class="cost-age-filter" data-cost-age-toggle type="button">≤ 3 months</button>
+      </div>
+    </div>
+    <div class="model-cost-list" id="cost-model-list" data-three-months-ago="${threeMonthsAgo}"><div class="model-cost-header">Estimated Cost Per Model</div>${rows}</div>
+  </div>`;
 }
 
 function buildModelUsageHtml(models: ModelUsage[], projectTotalTokens: number): string {
@@ -266,7 +333,7 @@ async function getHtml(
   projectDays: ProjectDayTokens[],
   modelCosts: ModelCost[],
   quotaSummary?: QuotaSummary,
-): string {
+): Promise<string> {
   const grandTotal = projects.reduce((s, r) => s + r.totalTokens, 0);
   const grandCost = projects.reduce((s, r) => s + r.totalCost, 0);
   const grandSteps = projects.reduce((s, r) => s + r.steps, 0);
@@ -289,6 +356,8 @@ async function getHtml(
     hideTitle: true,
     series: [{ key: "totalTokens" as const, label: "total tokens", color: "var(--accent)" }],
   }));
+
+  const modelData = await fetchModelData();
 
   const projectCards = projects
     .map((r, index) => {
@@ -370,7 +439,7 @@ async function getHtml(
             ${projectDayRows.length > 0 ? buildDailyChartSection(projectChart) : '<p class="empty">No daily token usage data found for this project.</p>'}
           </div>
           ${buildModelUsageHtml(r.models, r.totalTokens)}
-          ${buildModelCostHtml(modelCosts, r.project)}
+          ${buildModelCostHtmlSync(modelCosts, r.project, modelData, { inputTokens: r.inputTokens, outputTokens: r.outputTokens, reasoningTokens: r.reasoningTokens, cacheRead: r.cacheRead })}
         </div>
       </div>`;
     })
@@ -422,6 +491,13 @@ async function getHtml(
 
   const hasProjects = projects.length > 0;
   const hasDays = days.length > 0;
+  const grandTokens = {
+    inputTokens: projects.reduce((s, r) => s + r.inputTokens, 0),
+    outputTokens: projects.reduce((s, r) => s + r.outputTokens, 0),
+    reasoningTokens: projects.reduce((s, r) => s + r.reasoningTokens, 0),
+    cacheRead: projects.reduce((s, r) => s + r.cacheRead, 0),
+  };
+  const globalCostHtml = buildGlobalCostTab(grandTokens, modelData);
   const hasData = hasProjects || hasDays;
   const defaultTab = hasProjects ? "projects" : "daily";
 
@@ -472,6 +548,7 @@ async function getHtml(
   <div class="tabs">
     <button class="tab ${defaultTab === "projects" ? "active" : ""}" data-tab="projects">Projects</button>
     <button class="tab ${defaultTab === "daily" ? "active" : ""}" data-tab="daily">Daily</button>
+    <button class="tab" data-tab="cost">$</button>
   </div>
   <div class="tab-content ${defaultTab === "projects" ? "active" : ""}" id="tab-projects">
     ${hasProjects ? `<div class="cards">${projectCards}</div>` : '<p class="empty">No project token usage data found.</p>'}
@@ -496,6 +573,9 @@ async function getHtml(
         ${dailyGraphHtml}
       </div>
     </div>` : '<p class="empty">No daily token usage data found.</p>'}
+  </div>
+  <div class="tab-content" id="tab-cost">
+    ${globalCostHtml}
   </div>` : '<p class="empty">No token usage data found.<br>Make sure Kilo is installed and ~/.local/share/kilo/kilo.db exists.</p>'}
   <script>${clientScript}
   </script>

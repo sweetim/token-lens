@@ -73,9 +73,9 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         }));
       }
 
-      this.view.webview.html = getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaSummary);
+      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaSummary);
     } catch {
-      this.view.webview.html = getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaSummary);
+      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaSummary);
     }
   }
 }

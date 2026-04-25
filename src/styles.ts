@@ -162,6 +162,121 @@ const STYLES = `
   .tab-content.active { display: block; }
   #tab-projects { overflow-y: auto; }
   #tab-daily { overflow: hidden; }
+  #tab-cost { overflow-y: auto; }
+
+  .cost-tab-inner {
+    padding: 10px 10px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cost-token-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    gap: 6px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .cost-token-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+  .cost-token-value {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  .cost-token-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+  }
+  .cost-provider-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .cost-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cost-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cost-sort {
+    display: flex;
+    gap: 4px;
+  }
+  .cost-sort-button {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .cost-sort-button:hover {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+  .cost-sort-button.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+  }
+  .cost-age-filter {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    margin-left: auto;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .cost-age-filter:hover {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+  .cost-age-filter.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+  }
+  .cost-provider-filter {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .cost-provider-filter:hover {
+    color: var(--fg);
+    border-color: var(--accent);
+  }
+  .cost-provider-filter.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+  }
 
   .cards {
     padding: 10px 10px 20px;

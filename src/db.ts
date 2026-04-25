@@ -84,7 +84,9 @@ SELECT
   json_extract(message.data, '$.providerID') AS provider,
   json_extract(message.data, '$.modelID') AS model,
   SUM(CAST(json_extract(part.data, '$.tokens.input') AS INTEGER)) AS input_tokens,
-  SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens
+  SUM(CAST(json_extract(part.data, '$.tokens.output') AS INTEGER)) AS output_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.reasoning') AS INTEGER)) AS reasoning_tokens,
+  SUM(CAST(json_extract(part.data, '$.tokens.cache.read') AS INTEGER)) AS cache_read
 FROM part
 JOIN message ON message.id = part.message_id
 JOIN session s ON s.id = message.session_id
@@ -218,6 +220,8 @@ function queryModelCosts(): Promise<ModelCost[]> {
     model: String(r.model ?? ""),
     inputTokens: Number(r.input_tokens) || 0,
     outputTokens: Number(r.output_tokens) || 0,
+    reasoningTokens: Number(r.reasoning_tokens) || 0,
+    cacheRead: Number(r.cache_read) || 0,
   }));
 }
 

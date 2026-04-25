@@ -14,13 +14,13 @@ const PROVIDER_ID_MAP: Record<string, string> = {
 
 type ModelData = {
   createdDates: Record<string, number>;
-  pricing: Record<string, { prompt: number; completion: number }>;
+  pricing: Record<string, { prompt: number; completion: number; cacheRead: number }>;
 };
 
 type OpenRouterModel = {
   id: string;
   created: number;
-  pricing: { prompt: string; completion: string };
+  pricing: { prompt: string; completion: string; input_cache_read?: string };
 };
 
 let cachedData: ModelData | null = null;
@@ -50,14 +50,22 @@ async function fetchModelData(): Promise<ModelData> {
     const models = body.data;
 
     const createdDates: Record<string, number> = {};
-    const pricing: Record<string, { prompt: number; completion: number }> = {};
+    const pricing: Record<string, { prompt: number; completion: number; cacheRead: number }> = {};
 
     for (const model of models) {
       const id = model.id.replace(/:.*$/, "");
       createdDates[id] = model.created;
       const promptPrice = Number(model.pricing.prompt);
       const completionPrice = Number(model.pricing.completion);
-      pricing[id] = { prompt: promptPrice, completion: completionPrice };
+      const cacheReadRaw = model.pricing.input_cache_read;
+      const cacheReadPrice = cacheReadRaw !== null && cacheReadRaw !== undefined && cacheReadRaw !== "" ? Number(cacheReadRaw) : NaN;
+      pricing[id] = { prompt: promptPrice, completion: completionPrice, cacheRead: cacheReadPrice };
+    }
+
+    for (const p of Object.values(pricing)) {
+      if (isNaN(p.cacheRead)) {
+        p.cacheRead = p.prompt * 0.1;
+      }
     }
 
     cachedData = { createdDates, pricing };
