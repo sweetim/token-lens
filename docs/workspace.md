@@ -42,7 +42,7 @@ src/
    - Falls back to "TokenLens ?" with prompt to set API key if none is stored
 
 2. **Sidebar Panel** (`tokenSidebar.ts` + `html.ts`)
-   - Activity bar icon (uses `icons/zai.svg`)
+   - Activity bar icon (currently uses `icons/token-stack-lens.svg`; alternate variants include `icons/token-pulse-ring.svg` and the legacy `icons/zai.svg`)
    - Webview with two tabs: **Projects** and **Daily**
     - **Quota section:** Progress bar showing current quota usage percentage and time until reset (fed by `QuotaSummary` from the z.ai API).
     - **Hero section:** Summary stats — today's tokens, total tokens, total cost, and total steps across all projects.
@@ -99,6 +99,8 @@ src/
 | `tsconfig.json` | TypeScript config (strict, ES2022, Node16) |
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
 | `.vscodeignore` | Files excluded from the packaged `.vsix` |
-| `icons/zai.svg` | Activity bar icon for the sidebar |
+| `icons/token-stack-lens.svg` | Current activity bar icon for the sidebar: stacked tokens with a magnifying lens |
+| `icons/token-pulse-ring.svg` | Preview activity bar icon: token with an observability pulse ring |
+| `icons/zai.svg` | Legacy activity bar icon asset |
 | `icons/logo.png` | Extension marketplace icon (used in `package.json` `"icon"`) |
 | `CHANGELOG.md` | Release notes (currently unreleased) |

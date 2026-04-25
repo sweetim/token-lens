@@ -44,7 +44,7 @@
         {
           "id": "token-lens",
           "title": "TokenLens",
-          "icon": "icons/zai.svg"
+          "icon": "icons/token-stack-lens.svg"
         }
       ]
     },
@@ -70,11 +70,12 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "compile": "npm run check-types && npm run lint && node esbuild.js && npm run copy-wasm",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "copy-wasm": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm','dist/sql-wasm.wasm')\"",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run copy-wasm",
     "check-types": "tsc --noEmit",
     "lint": "eslint src"
   },

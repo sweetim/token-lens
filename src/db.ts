@@ -85,7 +85,7 @@ async function getSqlModule(): Promise<SqlJsStatic> {
   if (!sqlModule) {
     sqlModule = await initSqlJs({
       locateFile: (file: string) =>
-        join(dirname(__dirname), "node_modules", "sql.js", "dist", file),
+        join(dirname(__dirname), "dist", file),
     });
   }
   return sqlModule;
