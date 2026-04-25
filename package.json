@@ -19,13 +19,13 @@
     "monitor",
     "dashboard"
   ],
-  "homepage": "https://github.com/sweetim/token-usage-info#readme",
+  "homepage": "https://github.com/sweetim/token-lens#readme",
   "bugs": {
-    "url": "https://github.com/sweetim/token-usage-info/issues"
+    "url": "https://github.com/sweetim/token-lens/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sweetim/token-usage-info.git"
+    "url": "git@github.com:sweetim/token-lens.git"
   },
   "publisher": "timx",
   "engines": {
