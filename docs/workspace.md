@@ -17,18 +17,29 @@
 src/
 ├── extension.ts      # Extension entry point — status bar item, commands, timer; defines QuotaResponse/Limit/UsageDetail inline types
 ├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel
-├── html.ts           # Generates the full sidebar HTML (hero stats, project cards, daily virtual list, SVG line charts)
+├── html.ts           # Assembles the sidebar shell HTML from shared webview data/section builders
 ├── db.ts             # Queries the local Kilo SQLite database via `sql.js` npm package (pure WASM, no native modules)
 ├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, ModelUsage, ModelCost, and QuotaSummary type definitions
 ├── bars.ts           # Stacked bar chart HTML helpers and segment colors
 ├── format.ts         # Number/token formatting, HTML escaping, date formatting
 ├── model-data.ts     # Fetches and caches OpenRouter model pricing data; maps provider/model IDs to OpenRouter format; filters by provider allow-list and 90-day recency
 ├── styles.ts         # All CSS styles for the webview sidebar
-├── client-script.ts  # Generates the inline `<script>` that injects `window.__TOKEN_LENS_DATA__` into the webview
+├── webview-contract.ts # Shared extension/webview types for chart data, persisted UI state, and payload structure
+├── webview-model-cost.ts # Shared model-cost calculation used by both the extension and the webview bundle
+├── webview/
+│   ├── data.ts       # Builds the serialized webview payload and render metadata from DB/query results
+│   ├── document.ts   # Builds the final HTML document, JSON payload script, CSP, nonce, and client bundle tag
+│   └── sections.ts   # Renders quota, project, daily, and global cost HTML sections
 └── sql.js.d.ts       # Custom type declarations for the sql.js WASM module
 webview-ui/
 └── src/
-    └── main.ts       # Client-side JS (bundled to dist/webview-client.js): SVG line chart rendering, pie chart, tooltip system, legend toggle, virtual list, tab/card interactions
+    ├── bootstrap.ts  # Reads the JSON payload and persists UI state via VS Code webview state
+    ├── charting.ts   # SVG chart, tooltip, legend-toggle, and pie-chart rendering
+    ├── cost-panel.ts # Cost filters, model pinning, and project cost-list re-rendering
+    ├── daily-list.ts # Virtualized daily cards list and expand/collapse measurement logic
+    ├── constants.ts  # Shared browser-side visual constants
+    ├── view-helpers.ts # Shared browser-side HTML/token formatting helpers
+    └── main.ts       # Browser entrypoint that wires tabs, cards, charts, list virtualization, and cost panel modules
 ```
 
 ### Data Sources
@@ -48,7 +59,7 @@ webview-ui/
    - Auto-refreshes every 5 minutes
    - Falls back to "TokenLens ?" with prompt to set API key if none is stored
 
-2. **Sidebar Panel** (`tokenSidebar.ts` + `html.ts` + `styles.ts` + `client-script.ts` + `webview-ui/src/main.ts`)
+2. **Sidebar Panel** (`tokenSidebar.ts` + `html.ts` + `src/webview/*` + `styles.ts` + `webview-ui/src/*`)
    - Activity bar icon (`icons/token-stack-lens.svg`; legacy variant: `icons/zai.svg`)
    - Webview with two tabs: **Projects** and **Daily**
      - **Quota section:** Progress bar showing current quota usage percentage and time until reset (fed by `QuotaSummary` from the z.ai API).
@@ -57,7 +68,8 @@ webview-ui/
      - **Daily tab:** Two sub-views toggled via a Cards/Graph pill switcher:
        - **Cards view:** Virtualized scrollable list of day-by-day usage with horizontal bar charts. Rows support expand/collapse, and the virtual list measures rendered row heights so long lists remain performant even when rows expand.
        - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), Sessions And Steps, and LLM Usage (pie chart). Shows Latest Day, Average/Day, and Peak summary stats. Series can be toggled via legend buttons.
-    - **Data injection:** `client-script.ts` serializes chart data as `window.__TOKEN_LENS_DATA__` inline; `webview-ui/src/main.ts` (loaded as `dist/webview-client.js`) reads it and renders charts client-side.
+    - **Data injection:** `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag; `webview-ui/src/bootstrap.ts` parses that payload and the browser modules render charts client-side.
+    - **Webview persistence:** cost filters and pinned models are stored with VS Code webview state (`acquireVsCodeApi().getState()/setState()`) instead of `localStorage`.
 
 ### Commands
 
@@ -92,9 +104,9 @@ webview-ui/
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
 - **DB Queries:** Uses the `sql.js` npm package (pure WASM SQLite, no native modules) to query the local SQLite database. The database is loaded into memory from disk and queries are executed synchronously against the in-memory copy. Six queries join `part`, `message`, `session` tables: project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries extract `providerID` and `modelID` from the `message.data` JSON field. All queries filter on `step-finish` type entries. Day grouping uses the local timezone offset (computed from `new Date().getTimezoneOffset()`) rather than UTC, so daily totals align with the user's actual calendar day.
 - **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
-- **Webview:** The sidebar uses a webview with scripts enabled and a flex-based layout so the active tab can fill the sidebar reliably.
+- **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
-- **Runtime Dependencies:** `vscode` remains external to the bundle. `sql.js` is loaded at runtime by `dist/extension.js`, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js` (client-side charting/interaction code bundled from `webview-ui/src/main.ts`).
+- **Runtime Dependencies:** `vscode` remains external to the bundle. `sql.js` is loaded at runtime by `dist/extension.js`, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js`, which now boots from a JSON payload script rather than `window.__TOKEN_LENS_DATA__`.
 - **Model Cost Estimation:** `model-data.ts` fetches model pricing from the OpenRouter API (`/api/v1/models`), caches it in memory for 1 hour, and filters models by an allowed-provider list (openai, deepseek, moonshotai, anthropic, z-ai, qwen, minimax) and a 90-day recency window. Provider IDs from the local DB are mapped to OpenRouter format via `PROVIDER_ID_MAP`. Costs are computed per-project by multiplying token counts (input, output, reasoning, cache read) by the model's pricing rates.
 
 ---
@@ -108,7 +120,16 @@ webview-ui/
 | `tsconfig.json` | TypeScript config (strict, ES2022, Node16) |
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
 | `.vscodeignore` | Files excluded from the packaged `.vsix`, with `.kilo/**` excluded and `node_modules/sql.js` explicitly re-included for runtime loading |
-| `webview-ui/tsconfig.json` | TypeScript config for browser-side code (ES2022, DOM libs, bundler module resolution) |
+| `src/webview-contract.ts` | Shared extension/webview payload and persisted-state types |
+| `src/webview-model-cost.ts` | Shared model-cost calculator used on both sides of the webview boundary |
+| `src/webview/data.ts` | Server-side webview payload builder |
+| `src/webview/document.ts` | Webview HTML document builder with JSON payload + CSP |
+| `src/webview/sections.ts` | Server-side HTML section renderers for the sidebar |
+| `webview-ui/tsconfig.json` | TypeScript config for browser-side code and shared cross-boundary files |
+| `webview-ui/src/bootstrap.ts` | Webview payload parsing and VS Code state persistence |
+| `webview-ui/src/charting.ts` | Browser-side chart and tooltip rendering |
+| `webview-ui/src/cost-panel.ts` | Browser-side cost filter/model pin interactions |
+| `webview-ui/src/daily-list.ts` | Browser-side daily virtual list controller |
 | `icons/token-stack-lens.svg` | Current activity bar icon for the sidebar: stacked tokens with a magnifying lens |
 | `icons/zai.svg` | Legacy activity bar icon asset |
 | `icons/logo.png` | Extension marketplace icon (used in `package.json` `"icon"`) |
