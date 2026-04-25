@@ -2,7 +2,7 @@
   "name": "token-lens",
   "displayName": "Token Lens",
   "description": "Track LLM token usage and costs in the status bar with detailed analytics in the sidebar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "icon": "icons/logo.png",
   "galleryBanner": {
