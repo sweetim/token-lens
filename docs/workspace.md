@@ -2,9 +2,9 @@
 
 ## Overview
 
-**TokenLens** (package name `token-lens`) is a VS Code extension that displays LLM token usage from the [z.ai](https://z.ai) provider directly in the VS Code status bar and a sidebar panel. It queries both the z.ai cloud API for quota limits and a local SQLite database for per-project and per-day token breakdowns.
+**TokenLens** (package name `token-lens`) is a VS Code extension that displays LLM token usage and cost analytics directly in the VS Code status bar and a sidebar panel. It polls the [z.ai](https://z.ai) cloud API for quota limits, queries the local Kilo SQLite database for per-project and per-day usage data, and fetches OpenRouter pricing data for model cost estimation.
 
-- **Version:** 1.0.0
+- **Version:** 1.3.0
 - **Engine:** VS Code ^1.116.0
 - **Language:** TypeScript (strict mode, ES2022, Node16 modules)
 - **Build:** esbuild → two bundled files: `dist/extension.js` (CJS, Node) and `dist/webview-client.js` (IIFE, browser)
@@ -15,14 +15,14 @@
 
 ```
 src/
-├── extension.ts      # Extension entry point — status bar item, commands, timer; defines QuotaResponse/Limit/UsageDetail inline types
+├── extension.ts      # Extension entry point — status bar item, commands, quota polling, persisted snapshot recovery, and retry scheduling
 ├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel
 ├── html.ts           # Assembles the sidebar shell HTML from shared webview data/section builders
 ├── db.ts             # Queries the local Kilo SQLite database via Drizzle ORM on top of the `sql.js` SQLite driver
-├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, ModelUsage, ModelCost, and QuotaSummary type definitions
+├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, ModelUsage, ModelCost, QuotaSummary, QuotaState, and QuotaStateStatus type definitions
 ├── bars.ts           # Stacked bar chart HTML helpers and segment colors
 ├── format.ts         # Number/token formatting, HTML escaping, date formatting
-├── model-data.ts     # Fetches and caches OpenRouter model pricing data; maps provider/model IDs to OpenRouter format; filters by provider allow-list and 90-day recency
+├── model-data.ts     # Fetches and caches OpenRouter model pricing data; maps provider/model IDs to OpenRouter format for later project-level filtering and cost comparisons
 ├── styles.ts         # All CSS styles for the webview sidebar
 ├── webview-contract.ts # Shared extension/webview types for chart data, persisted UI state, and payload structure
 ├── webview-model-cost.ts # Shared model-cost calculation used by both the extension and the webview bundle
@@ -39,7 +39,7 @@ webview-ui/
     ├── daily-list.ts # Virtualized daily cards list and expand/collapse measurement logic
     ├── constants.ts  # Shared browser-side visual constants
     ├── view-helpers.ts # Shared browser-side HTML/token formatting helpers
-    └── main.ts       # Browser entrypoint that wires tabs, cards, charts, list virtualization, and cost panel modules
+    └── main.ts       # Browser entrypoint that wires tabs, period aggregation, cards, charts, list virtualization, and cost panel modules
 ```
 
 ### Data Sources
@@ -47,7 +47,7 @@ webview-ui/
 | Source | Location | Purpose |
 |--------|----------|---------|
 | z.ai API | `https://api.z.ai/api/monitor/usage/quota/limit` | Quota percentage, reset time (status bar) |
-| OpenRouter API | `https://openrouter.ai/api/v1/models` | Model pricing data for cost estimation (cached 1 hour, filtered by provider allow-list and 90-day recency) |
+| OpenRouter API | `https://openrouter.ai/api/v1/models` | Model pricing data for cost estimation (cached 1 hour; project-level comparisons additionally apply provider and recency filters, while the global cost list applies UI filters client-side) |
 | Local DB | `~/.local/share/kilo/kilo.db` | Per-project and per-day token breakdowns (sidebar) |
 
 ### UI Components
@@ -62,14 +62,14 @@ webview-ui/
 
 2. **Sidebar Panel** (`tokenSidebar.ts` + `html.ts` + `src/webview/*` + `styles.ts` + `webview-ui/src/*`)
     - Activity bar icon (`icons/token-stack-lens.svg`; legacy variant: `icons/zai.svg`)
-    - Webview with three tabs: **Projects**, **Daily**, and **Cost**
+    - Webview with three tabs: **Projects**, **Time**, and **$**
       - **Quota section:** Progress bar showing current quota usage percentage and time until reset (fed by `QuotaSummary` from the z.ai API), plus explicit loading/stale/unavailable/auth states when quota refreshes fail.
       - **Hero section:** Summary stats — today's tokens, total tokens, total cost, and total steps across all projects.
       - **Projects tab:** Expandable cards showing the project name with a total-token badge, per-project token breakdown (input, output, reasoning, cache read/write), cost, step count, session count, and duration. Includes stacked color bar visualization. Expanded view includes per-project SVG line chart, LLM usage breakdown, and model cost estimates from OpenRouter pricing data.
-      - **Daily tab:** Two sub-views toggled via a Cards/Graph pill switcher:
+      - **Time tab:** Includes a Daily/Weekly/Monthly period switcher and two sub-views toggled via a Cards/Graph pill switcher:
         - **Cards view:** Virtualized scrollable list of day-by-day usage with horizontal bar charts. Rows support expand/collapse, and the virtual list measures rendered row heights so long lists remain performant even when rows expand.
-        - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), Sessions And Steps, and LLM Usage (pie chart). Shows Latest Day, Average/Day, and Peak summary stats. Series can be toggled via legend buttons.
-      - **Cost tab:** Estimated per-model cost list with provider/sort/age filters. Clicking a model in this list pins it in webview state so the saved models are reused for project-level cost comparisons in the Projects tab.
+        - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), Sessions And Steps, and LLM Usage (pie chart). Summary stat labels and chart data update with the active daily/weekly/monthly aggregation, and series can be toggled via legend buttons.
+      - **$ tab:** Estimated per-model cost list with provider/sort/age filters. Clicking a model in this list pins it in webview state so the saved models are reused for project-level cost comparisons in the Projects tab.
      - **Data injection:** `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag; `webview-ui/src/bootstrap.ts` parses that payload and the browser modules render charts client-side.
      - **Webview persistence:** cost filters and pinned models are stored with VS Code webview state (`acquireVsCodeApi().getState()/setState()`) instead of `localStorage`.
 
@@ -99,6 +99,44 @@ webview-ui/
 - Node.js (with npm)
 - VS Code ^1.116.0
 
+### Dependencies
+
+#### Runtime
+
+- `dayjs` - local day bucketing, cache timing, and date-based summary calculations
+- `drizzle-orm` - typed query layer over the local Kilo SQLite database
+- `sql.js` - WASM SQLite runtime used to read `~/.local/share/kilo/kilo.db`
+
+#### Development
+
+- `@types/node`
+- `@types/vscode`
+- `esbuild`
+- `eslint`
+- `npm-run-all`
+- `typescript`
+- `typescript-eslint`
+
+### Scripts
+
+| Script | Command | Purpose |
+|--------|---------|---------|
+| test | `npm test` | Runs the regression check for local-time day bucketing in `src/db.ts` |
+| compile | `npm run compile` | Type-checks, lints, bundles the extension and webview, then copies the SQL.js WASM asset |
+| watch | `npm run watch` | Runs the watch tasks for esbuild and both TypeScript projects in parallel |
+| watch:esbuild | `npm run watch:esbuild` | Rebuilds the extension and webview bundles on change |
+| watch:tsc | `npm run watch:tsc` | Watches the extension TypeScript project with `--noEmit` |
+| watch:webview:tsc | `npm run watch:webview:tsc` | Watches the webview TypeScript project with `--noEmit` |
+| copy-wasm | `npm run copy-wasm` | Copies `sql-wasm.wasm` into `dist/` |
+| package | `npm run package` | Creates the production extension/webview bundles used for packaging |
+| vscode:prepublish | `npm run vscode:prepublish` | Runs the packaging build before publishing a VS Code extension |
+| check-types | `npm run check-types` | Type-checks both the extension and webview projects |
+| lint | `npm run lint` | Lints `src` and `webview-ui/src` |
+
+### Environment Variables
+
+- None. The extension does not read configuration from `process.env` or `Bun.env`; the z.ai API key is stored in VS Code `SecretStorage`.
+
 ### Validation
 
 - `npm test` runs the regression check for local-time day bucketing in `src/db.ts`.
@@ -113,8 +151,8 @@ webview-ui/
 - **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Quota Recovery:** The extension stores the last successful quota snapshot in VS Code `globalState`, restores it for startup recovery when available, clears it on setup/auth errors, and uses timeout-based retry backoff for transient z.ai failures.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
-- **Runtime Dependencies:** `vscode` remains external to the bundle. `drizzle-orm` is bundled into `dist/extension.js` as the typed query layer. `sql.js` still provides the runtime SQLite engine, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js`, which now boots from a JSON payload script rather than `window.__TOKEN_LENS_DATA__`.
-- **Model Cost Estimation:** `model-data.ts` fetches model pricing from the OpenRouter API (`/api/v1/models`), caches it in memory for 1 hour, and filters models by an allowed-provider list (openai, deepseek, moonshotai, anthropic, z-ai, qwen, minimax) and a 90-day recency window. Provider IDs from the local DB are mapped to OpenRouter format via `PROVIDER_ID_MAP`. Costs are computed per-project by multiplying token counts (input, output, reasoning, cache read) by the model's pricing rates.
+- **Runtime Dependencies:** `vscode` remains external to the bundle. `dayjs` is used at runtime for local-day grouping, model-data cache timing, and date-based summaries. `drizzle-orm` is bundled into `dist/extension.js` as the typed query layer. `sql.js` still provides the runtime SQLite engine, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js`, which now boots from a JSON payload script rather than `window.__TOKEN_LENS_DATA__`.
+- **Model Cost Estimation:** `model-data.ts` fetches model pricing from the OpenRouter API (`/api/v1/models`) and caches it in memory for 1 hour. Provider IDs from the local DB are mapped to OpenRouter format via `PROVIDER_ID_MAP`. Project-level cost comparisons in `src/webview/data.ts` and `src/webview/sections.ts` apply the allowed-provider list (openai, deepseek, moonshotai, anthropic, z-ai, qwen, minimax) and a 90-day recency window before computing costs from input, output, reasoning, and cache-read token totals. The global Cost tab starts from the fetched pricing list and applies provider/sort/age filters in the webview UI.
 
 ---
 

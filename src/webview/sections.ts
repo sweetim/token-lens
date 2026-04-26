@@ -150,10 +150,10 @@ function buildDailyLineChart(days: DayTokens[], chartConfigs: ChartConfig[]): st
   const pieChartSection = `
     <section class="daily-chart-section" data-chart-id="daily-model-pie">
       <div class="daily-chart-header">
-        <div class="daily-chart-title">LLM Usage</div>
+        <div class="daily-chart-title">LLM Usage (Latest Day)</div>
       </div>
       <div class="pie-chart-wrap">
-        <svg class="pie-chart" viewBox="0 0 200 200" role="img" aria-label="LLM usage distribution"></svg>
+        <svg class="pie-chart" viewBox="0 0 200 200" role="img" aria-label="LLM usage distribution for latest day"></svg>
         <div class="pie-legend" id="pie-legend"></div>
       </div>
     </section>`;

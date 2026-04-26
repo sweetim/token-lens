@@ -51,7 +51,7 @@ async function getHtml(
   <div class="tabs">
     <button class="tab ${renderData.defaultTab === "projects" ? "active" : ""}" data-tab="projects">Projects</button>
     <button class="tab ${renderData.defaultTab === "daily" ? "active" : ""}" data-tab="daily">Time</button>
-    <button class="tab" data-tab="cost">$</button>
+    <button class="tab" data-tab="cost">Cost</button>
   </div>
   <div class="tab-content ${renderData.defaultTab === "projects" ? "active" : ""}" id="tab-projects">
     ${renderData.hasProjects ? `<div class="cards">${projectCards}</div>` : '<p class="empty">No project token usage data found.</p>'}

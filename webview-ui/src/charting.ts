@@ -54,12 +54,12 @@ function createChartController(data: WebviewData): ChartController {
     return length <= 6
       ? Array.from({ length }, (_, index) => index)
       : Array.from(new Set([
-          0,
-          Math.round((length - 1) * 0.25),
-          Math.round((length - 1) * 0.5),
-          Math.round((length - 1) * 0.75),
-          length - 1,
-        ])).sort((left, right) => left - right);
+        0,
+        Math.round((length - 1) * 0.25),
+        Math.round((length - 1) * 0.5),
+        Math.round((length - 1) * 0.75),
+        length - 1,
+      ])).sort((left, right) => left - right);
   }
 
   function buildChartGuideLines(maxValue: number, valueFormat: string): string {
@@ -200,12 +200,12 @@ function createChartController(data: WebviewData): ChartController {
     const maxValue = visibleSeries.length === 0
       ? 1
       : chartDays.reduce((currentMax, dayItem) => {
-          const dayMax = visibleSeries.reduce(
-            (seriesMax, seriesItem) => Math.max(seriesMax, dayItem[seriesItem.key]),
-            0,
-          );
-          return Math.max(currentMax, dayMax);
-        }, 0) || 1;
+        const dayMax = visibleSeries.reduce(
+          (seriesMax, seriesItem) => Math.max(seriesMax, dayItem[seriesItem.key]),
+          0,
+        );
+        return Math.max(currentMax, dayMax);
+      }, 0) || 1;
 
     const defs = chartConfig.fillArea && visibleSeries.length > 0
       ? '<defs><linearGradient id="' + chartConfig.id + '-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:' + visibleSeries[0].color + '; stop-opacity: 0.24;"></stop><stop offset="100%" style="stop-color:' + visibleSeries[0].color + '; stop-opacity: 0;"></stop></linearGradient></defs>'
@@ -228,7 +228,7 @@ function createChartController(data: WebviewData): ChartController {
           : "";
         const pointMarkers = points
           .map((point) =>
-            '<circle class="daily-chart-point" data-chart-id="' + escapeHtmlText(chartConfig.id) + '" data-day-index="' + point.dayIndex + '" data-series-key="' + escapeHtmlText(seriesItem.key) + '" cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="8" style="stroke:' + seriesItem.color + '"></circle>',
+            '<circle class="daily-chart-point" data-chart-id="' + escapeHtmlText(chartConfig.id) + '" data-day-index="' + point.dayIndex + '" data-series-key="' + escapeHtmlText(seriesItem.key) + '" cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="6" style="stroke:' + seriesItem.color + '"></circle>',
           )
           .join("");
 
@@ -256,20 +256,25 @@ function createChartController(data: WebviewData): ChartController {
   }
 
   function computeModelPieData(dayData: DayDataItem[]): { name: string; totalTokens: number }[] {
-    const totals: Record<string, number> = {};
-    for (const dayItem of dayData) {
-      for (const model of dayItem.models) {
-        totals[model.model] = (totals[model.model] || 0) + model.totalTokens;
+    const latestPeriod = dayData.reduce<DayDataItem | null>((latest, dayItem) => {
+      if (!latest || dayItem.day > latest.day) {
+        return dayItem;
       }
+      return latest;
+    }, null);
+
+    if (!latestPeriod) {
+      return [];
     }
 
-    return Object.keys(totals)
-      .map((name) => ({ name, totalTokens: totals[name] }))
+    return latestPeriod.models
+      .map((model) => ({ name: model.model, totalTokens: model.totalTokens }))
       .sort((left, right) => right.totalTokens - left.totalTokens);
   }
 
   function renderPieChart(): void {
     const svg = document.querySelector(".pie-chart");
+    const legend = document.getElementById("pie-legend");
     if (!(svg instanceof SVGElement)) {
       return;
     }
@@ -278,6 +283,9 @@ function createChartController(data: WebviewData): ChartController {
     const total = pieData.reduce((sum, entry) => sum + entry.totalTokens, 0);
     if (total === 0) {
       svg.innerHTML = "";
+      if (legend instanceof HTMLElement) {
+        legend.innerHTML = "";
+      }
       return;
     }
 
@@ -309,7 +317,6 @@ function createChartController(data: WebviewData): ChartController {
     }
 
     svg.innerHTML = paths;
-    const legend = document.getElementById("pie-legend");
     if (legend instanceof HTMLElement) {
       legend.innerHTML = legendHtml;
     }

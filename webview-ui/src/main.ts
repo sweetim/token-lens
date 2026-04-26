@@ -58,6 +58,10 @@ function formatPeriodLabel(key: string, period: Period): string {
   return MONTH_NAMES[d.getMonth()] + " " + d.getDate();
 }
 
+function getPeriodUnit(period: Period): string {
+  return period === "daily" ? "Day" : period === "weekly" ? "Week" : "Month";
+}
+
 type NumericFields = {
   totalTokens: number;
   inputTokens: number;
@@ -99,21 +103,18 @@ function mergeModels(items: { models: DayModelUsage[] }[]): DayModelUsage[] {
 }
 
 function computeBars(items: DayDataItem[]): void {
-  const maxPerType: Record<string, number> = {};
-  for (const tt of TOKEN_TYPES) {
-    maxPerType[tt.key] = items.reduce((max, item) => Math.max(max, item[tt.key]), 0) || 1;
-  }
   for (const item of items) {
+    const dayMax = TOKEN_TYPES.reduce((max, tt) => Math.max(max, item[tt.key]), 0) || 1;
     item.summaryBars = TOKEN_TYPES.filter((tt) => SUMMARY_KEYS.has(tt.key)).map((tt) => ({
       label: tt.label,
       color: tt.color,
-      pct: ((item[tt.key] / maxPerType[tt.key]) * 100).toFixed(1),
+      pct: ((item[tt.key] / dayMax) * 100).toFixed(1),
       value: formatTokensCompact(item[tt.key]),
     }));
     item.detailBars = TOKEN_TYPES.filter((tt) => !SUMMARY_KEYS.has(tt.key)).map((tt) => ({
       label: tt.label,
       color: tt.color,
-      pct: ((item[tt.key] / maxPerType[tt.key]) * 100).toFixed(1),
+      pct: ((item[tt.key] / dayMax) * 100).toFixed(1),
       value: formatTokensCompact(item[tt.key]),
     }));
   }
@@ -247,7 +248,7 @@ function updateGraphStats(chartDays: ChartDayItem[], period: Period): void {
   const peak = reversed.reduce((best, d) => d.totalTokens > best.totalTokens ? d : best, reversed[0]);
   const average = Math.round(reversed.reduce((s, d) => s + d.totalTokens, 0) / reversed.length);
 
-  const periodUnit = period === "daily" ? "Day" : period === "weekly" ? "Week" : "Month";
+  const periodUnit = getPeriodUnit(period);
   const latestLabel = document.querySelector("[data-stat=\"latest-label\"]");
   const averageLabel = document.querySelector("[data-stat=\"average-label\"]");
   const peakLabel = document.querySelector("[data-stat=\"peak-label\"]");
@@ -261,6 +262,20 @@ function updateGraphStats(chartDays: ChartDayItem[], period: Period): void {
   if (latestValue) {latestValue.textContent = formatTokensCompact(latest.totalTokens);}
   if (averageValue) {averageValue.textContent = formatTokensCompact(average);}
   if (peakValue) {peakValue.textContent = formatTokensCompact(peak.totalTokens);}
+}
+
+function updatePieChartHeading(period: Period): void {
+  const periodUnit = getPeriodUnit(period);
+  const pieTitle = document.querySelector('.daily-chart-section[data-chart-id="daily-model-pie"] .daily-chart-title');
+  const pieChart = document.querySelector(".pie-chart");
+
+  if (pieTitle instanceof HTMLElement) {
+    pieTitle.textContent = "LLM Usage (Latest " + periodUnit + ")";
+  }
+
+  if (pieChart instanceof SVGElement) {
+    pieChart.setAttribute("aria-label", "LLM usage distribution for latest " + periodUnit.toLowerCase());
+  }
 }
 
 function applyPeriod(period: Period): void {
@@ -284,6 +299,7 @@ function applyPeriod(period: Period): void {
   });
 
   updateGraphStats(aggregatedChartData, period);
+  updatePieChartHeading(period);
 
   periodButtons.forEach((button) => {
     if (!(button instanceof HTMLElement)) {return;}
@@ -299,6 +315,7 @@ function applyPeriod(period: Period): void {
 }
 
 chartController.renderAllCharts();
+updatePieChartHeading(activePeriod);
 chartController.renderPieChart();
 
 if (scroll instanceof HTMLElement) {

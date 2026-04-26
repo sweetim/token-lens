@@ -157,36 +157,27 @@ async function buildWebviewRenderData(
     { key: "cacheWrite", color: SEG_COLORS.cacheWrite, label: "cache w" },
   ] as const;
 
-  const maxPerType: Record<(typeof tokenTypes)[number]["key"], number> = {
-    inputTokens: 1,
-    outputTokens: 1,
-    reasoningTokens: 1,
-    cacheRead: 1,
-    cacheWrite: 1,
-  };
-
-  for (const tokenType of tokenTypes) {
-    maxPerType[tokenType.key] = days.reduce((currentMax, row) => Math.max(currentMax, row[tokenType.key]), 0) || 1;
-  }
-
   const summaryKeys = new Set(["inputTokens", "outputTokens"]);
   const webviewData: WebviewData = {
-    dayData: days.map((day) => ({
-      ...mapChartDayData(day),
-      durationMs: day.duration,
-      summaryBars: tokenTypes.filter((tokenType) => summaryKeys.has(tokenType.key)).map((tokenType) => ({
-        label: tokenType.label,
-        color: tokenType.color,
-        pct: ((day[tokenType.key] / maxPerType[tokenType.key]) * 100).toFixed(1),
-        value: formatTokens(day[tokenType.key]),
-      })),
-      detailBars: tokenTypes.filter((tokenType) => !summaryKeys.has(tokenType.key)).map((tokenType) => ({
-        label: tokenType.label,
-        color: tokenType.color,
-        pct: ((day[tokenType.key] / maxPerType[tokenType.key]) * 100).toFixed(1),
-        value: formatTokens(day[tokenType.key]),
-      })),
-    })),
+    dayData: days.map((day) => {
+      const dayMax = tokenTypes.reduce((max, tt) => Math.max(max, day[tt.key]), 0) || 1;
+      return {
+        ...mapChartDayData(day),
+        durationMs: day.duration,
+        summaryBars: tokenTypes.filter((tokenType) => summaryKeys.has(tokenType.key)).map((tokenType) => ({
+          label: tokenType.label,
+          color: tokenType.color,
+          pct: ((day[tokenType.key] / dayMax) * 100).toFixed(1),
+          value: formatTokens(day[tokenType.key]),
+        })),
+        detailBars: tokenTypes.filter((tokenType) => !summaryKeys.has(tokenType.key)).map((tokenType) => ({
+          label: tokenType.label,
+          color: tokenType.color,
+          pct: ((day[tokenType.key] / dayMax) * 100).toFixed(1),
+          value: formatTokens(day[tokenType.key]),
+        })),
+      };
+    }),
     dailyCharts: dailyChartConfigs,
     projectCharts: projectChartConfigs,
     dailyChartIds: dailyChartConfigs.map((chart) => chart.id),
