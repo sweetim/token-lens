@@ -6,6 +6,22 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.5.0]
+
+- Rewrote the webview UI using Preact for a lighter runtime.
+- Added a handshake protocol and race condition protection for webview messaging.
+- Implemented incremental data updates and cost tooltips in the analytics view.
+- Added model usage highlighting in cost comparison lists.
+- Modularized webview components and enhanced time/cost views.
+- Migrated the development runtime from npm to Bun.
+
+## [1.4.0]
+
+- Migrated the database layer to Drizzle ORM and enhanced webview capabilities.
+- Added timezone regression tests and improved cost estimation accuracy.
+- Implemented robust quota recovery and enhanced status reporting.
+- Improved daily chart styling and workspace documentation.
+
 ## [1.3.0]
 
 - Refactored the webview into a more modular, contract-based client architecture.
