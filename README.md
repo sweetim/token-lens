@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-  <img src="docs/images/landing.png" alt="Token Lens overview" width="700">
+  <img src="docs/images/landing.jpg" alt="Token Lens overview" width="700">
 </p>
 
 **Never lose track of your LLM spend again.** Real-time token usage right in your status bar, with rich analytics one click away.
