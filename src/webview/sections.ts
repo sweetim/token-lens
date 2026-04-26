@@ -2,7 +2,7 @@ import { SEG_COLORS, stackedBarHtml } from "../bars.js";
 import { escapeHtml, formatDay, formatDurationMs, formatTokens } from "../format.js";
 import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, toOpenRouterModelId } from "../model-data.js";
 import type { ModelData } from "../model-data.js";
-import type { DayTokens, ModelCost, ModelUsage, ProjectDayTokens, ProjectTokens, QuotaSummary } from "../types.js";
+import type { DayTokens, ModelCost, ModelUsage, ProjectDayTokens, ProjectTokens, QuotaState } from "../types.js";
 import { computeModelCostEstimates } from "../webview-model-cost.js";
 import type { ChartConfig, TokenBreakdown } from "../webview-contract.js";
 
@@ -28,6 +28,7 @@ function buildProjectModelCostHtml(
   modelData: ModelData,
   projectTokens: TokenBreakdown,
 ): string {
+  const projectModelCostInfoText = "This comparison uses models selected in the Cost tab. If none are selected, it compares only models used in this project";
   const now = Date.now();
   const modelIds = new Set<string>();
 
@@ -59,7 +60,7 @@ function buildProjectModelCostHtml(
     .map(({ modelId, cost }) => `<div class="model-cost-row"><span class="model-cost-id">${escapeHtml(modelId)}</span><span class="model-cost-value">$${cost.toFixed(2)}</span></div>`)
     .join("");
 
-  return `<div class="model-cost-list" data-project="${escapeHtml(project)}"><div class="model-cost-header">Model Cost Comparison</div>${rows}</div>`;
+  return `<div class="model-cost-list" data-project="${escapeHtml(project)}"><div class="model-cost-header"><span>Model Cost Comparison</span><span class="model-cost-info"><button class="model-cost-info-button" type="button" aria-label="${escapeHtml(projectModelCostInfoText)}" data-info-tooltip-text="${escapeHtml(projectModelCostInfoText)}"><svg class="model-cost-info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.75" r="1" fill="currentColor"/></svg></button></span></div>${rows}</div>`;
 }
 
 function buildGlobalCostTab(grandTokens: TokenBreakdown, modelData: ModelData): string {
@@ -196,10 +197,43 @@ function getRemainingBarColor(remainingPercentage: number): string {
   return "var(--green)";
 }
 
-function buildQuotaSection(quotaSummary: QuotaSummary | undefined): string {
-  const resetDurationLabel = quotaSummary ? quotaSummary.resetDurationLabel : "Unavailable";
+function formatDurationUntil(timestamp: number): string {
+  const diff = timestamp - Date.now();
+  if (diff <= 0) {
+    return "now";
+  }
+
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+}
+
+function buildQuotaSection(quotaState: QuotaState): string {
+  const quotaSummary = quotaState.summary;
   const remainingPercentage = quotaSummary ? Math.max(0, Math.min(100, quotaSummary.remainingPercentage)) : 0;
-  const usedPercentage = 100 - remainingPercentage;
+  const usedPercentage = quotaSummary ? Math.max(0, Math.min(100, quotaSummary.usedPercentage)) : 0;
+  const resetDurationLabel = quotaSummary
+    ? formatDurationUntil(quotaSummary.nextResetTime)
+    : quotaState.status === "loading"
+      ? "Loading"
+      : quotaState.status === "rateLimited"
+        ? "Retrying"
+        : "Unavailable";
+  const usageValueLabel = quotaSummary
+    ? `${usedPercentage.toFixed(1)}% used`
+    : quotaState.status === "loading"
+      ? "Loading quota..."
+      : "Usage unavailable";
+  const statusMessageHtml = quotaState.message
+    ? `<div class="quota-status-message">${escapeHtml(quotaState.message)}</div>`
+    : "";
+  const progressFillStyle = quotaSummary
+    ? `width:${usedPercentage.toFixed(1)}%;background:${getRemainingBarColor(remainingPercentage)}`
+    : "width:0%;background:var(--border)";
 
   return `
     <div class="quota-hero">
@@ -213,11 +247,12 @@ function buildQuotaSection(quotaSummary: QuotaSummary | undefined): string {
       <div class="quota-progress-section">
         <div class="quota-progress-header">
           <span class="quota-progress-label">Usage</span>
-          <span class="quota-progress-value">${usedPercentage.toFixed(1)}% used</span>
+          <span class="quota-progress-value">${escapeHtml(usageValueLabel)}</span>
         </div>
         <div class="quota-progress-track">
-          <div class="quota-progress-fill" style="width:${usedPercentage.toFixed(1)}%;background:${getRemainingBarColor(remainingPercentage)}"></div>
+          <div class="quota-progress-fill" style="${progressFillStyle}"></div>
         </div>
+        ${statusMessageHtml}
       </div>
     </div>`;
 }

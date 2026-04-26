@@ -17,6 +17,7 @@
 
 - **Status bar indicator** — color-coded usage at a glance (normal, warning ≥50%, error ≥80%)
 - **Rich tooltip** — usage bar, percentage, and time until reset
+- **Quota recovery** — keeps the last successful quota snapshot during transient API failures and shows stale/unavailable states explicitly
 - **Sidebar analytics** — daily and per-project token breakdown
 - **Auto-refresh** — data updates every 5 minutes
 - **Secure storage** — API key stored via VS Code's SecretStorage

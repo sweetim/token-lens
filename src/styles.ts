@@ -127,6 +127,11 @@ const STYLES = `
     height: 100%;
     border-radius: 999px;
   }
+  .quota-status-message {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
 
   .tabs {
     display: flex;

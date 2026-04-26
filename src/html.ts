@@ -1,4 +1,4 @@
-import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaSummary } from "./types.js";
+import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "./types.js";
 import * as vscode from "vscode";
 import { buildWebviewRenderData } from "./webview/data.js";
 import { buildWebviewDocument } from "./webview/document.js";
@@ -12,7 +12,7 @@ async function getHtml(
   days: DayTokens[],
   projectDays: ProjectDayTokens[],
   modelCosts: ModelCost[],
-  quotaSummary?: QuotaSummary,
+  quotaState: QuotaState,
 ): Promise<string> {
   const renderData = await buildWebviewRenderData(projects, days, projectDays, modelCosts);
   const projectCards = buildProjectCards({
@@ -25,7 +25,7 @@ async function getHtml(
   const dailyGraphHtml = buildDailyLineChart(days, renderData.webviewData.dailyCharts);
   const globalCostHtml = buildGlobalCostTab(renderData.grandTokens, renderData.modelData);
 
-  const bodyHtml = `${buildQuotaSection(quotaSummary)}
+  const bodyHtml = `${buildQuotaSection(quotaState)}
   <div class="hero">
     <div class="hero-title">Kilo Total Token Usage</div>
     <div class="hero-grid">

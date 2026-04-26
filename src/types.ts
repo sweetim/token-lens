@@ -68,8 +68,15 @@ type QuotaSummary = {
   usedPercentage: number;
   remainingPercentage: number;
   nextResetTime: number;
-  resetTimeLabel: string;
-  resetDurationLabel: string;
+  fetchedAt: number;
 };
 
-export { ProjectTokens, DayTokens, ProjectDayTokens, ModelCost, ModelUsage, QuotaSummary };
+type QuotaStateStatus = "loading" | "ready" | "stale" | "missingApiKey" | "authError" | "rateLimited" | "unavailable";
+
+type QuotaState = {
+  status: QuotaStateStatus;
+  message: string;
+  summary?: QuotaSummary;
+};
+
+export { ProjectTokens, DayTokens, ProjectDayTokens, ModelCost, ModelUsage, QuotaSummary, QuotaState, QuotaStateStatus };

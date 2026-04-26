@@ -1,12 +1,17 @@
 import * as vscode from "vscode";
 import { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
 import { getHtml } from "./html.js";
-import type { QuotaSummary } from "./types.js";
+import type { QuotaState } from "./types.js";
+
+const DEFAULT_QUOTA_STATE: QuotaState = {
+  status: "loading",
+  message: "Loading quota from z.ai.",
+};
 
 export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "token-lens.tokenSidebar";
   private view?: vscode.WebviewView;
-  private quotaSummary?: QuotaSummary;
+  private quotaState: QuotaState = DEFAULT_QUOTA_STATE;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -19,8 +24,8 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
     this.refresh();
   }
 
-  public async refresh(quotaSummary: QuotaSummary | null = this.quotaSummary ?? null): Promise<void> {
-    this.quotaSummary = quotaSummary ?? undefined;
+  public async refresh(quotaState: QuotaState = this.quotaState): Promise<void> {
+    this.quotaState = quotaState;
     if (!this.view) {
       return;
     }
@@ -76,9 +81,9 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         }));
       }
 
-      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaSummary);
+      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaState);
     } catch {
-      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaSummary);
+      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaState);
     }
   }
 }
