@@ -70,15 +70,15 @@
     ]
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js && npm run copy-wasm",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
+    "test": "bun test test/*.test.mjs",
+    "vscode:prepublish": "bun run package",
+    "compile": "bun run check-types && bun run lint && bun esbuild.js && bun run copy-wasm",
+    "watch": "bun run watch:esbuild & bun run watch:tsc & bun run watch:webview:tsc",
+    "watch:esbuild": "bun esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:webview:tsc": "tsc --noEmit --watch --project webview-ui/tsconfig.json",
-    "copy-wasm": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm','dist/sql-wasm.wasm')\"",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production && npm run copy-wasm",
+    "copy-wasm": "bun -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm','dist/sql-wasm.wasm')\"",
+    "package": "bun run check-types && bun run lint && bun esbuild.js --production && bun run copy-wasm",
     "check-types": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project webview-ui/tsconfig.json",
     "lint": "eslint src webview-ui/src"
   },
@@ -87,7 +87,6 @@
     "@types/vscode": "^1.116.0",
     "esbuild": "^0.27.3",
     "eslint": "^9.39.3",
-    "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },

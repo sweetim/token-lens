@@ -96,7 +96,7 @@ webview-ui/
 
 ### Prerequisites
 
-- Node.js (with npm)
+- Bun
 - VS Code ^1.116.0
 
 ### Dependencies
@@ -113,7 +113,6 @@ webview-ui/
 - `@types/vscode`
 - `esbuild`
 - `eslint`
-- `npm-run-all`
 - `typescript`
 - `typescript-eslint`
 
@@ -121,17 +120,17 @@ webview-ui/
 
 | Script | Command | Purpose |
 |--------|---------|---------|
-| test | `npm test` | Runs the regression check for local-time day bucketing in `src/db.ts` |
-| compile | `npm run compile` | Type-checks, lints, bundles the extension and webview, then copies the SQL.js WASM asset |
-| watch | `npm run watch` | Runs the watch tasks for esbuild and both TypeScript projects in parallel |
-| watch:esbuild | `npm run watch:esbuild` | Rebuilds the extension and webview bundles on change |
-| watch:tsc | `npm run watch:tsc` | Watches the extension TypeScript project with `--noEmit` |
-| watch:webview:tsc | `npm run watch:webview:tsc` | Watches the webview TypeScript project with `--noEmit` |
-| copy-wasm | `npm run copy-wasm` | Copies `sql-wasm.wasm` into `dist/` |
-| package | `npm run package` | Creates the production extension/webview bundles used for packaging |
-| vscode:prepublish | `npm run vscode:prepublish` | Runs the packaging build before publishing a VS Code extension |
-| check-types | `npm run check-types` | Type-checks both the extension and webview projects |
-| lint | `npm run lint` | Lints `src` and `webview-ui/src` |
+| test | `bun test` | Runs the regression check for local-timezone day bucketing in `src/db.ts` |
+| compile | `bun run compile` | Type-checks, lints, bundles the extension and webview, then copies the SQL.js WASM asset |
+| watch | `bun run watch` | Runs the watch tasks for esbuild and both TypeScript projects in parallel |
+| watch:esbuild | `bun run watch:esbuild` | Rebuilds the extension and webview bundles on change |
+| watch:tsc | `bun run watch:tsc` | Watches the extension TypeScript project with `--noEmit` |
+| watch:webview:tsc | `bun run watch:webview:tsc` | Watches the webview TypeScript project with `--noEmit` |
+| copy-wasm | `bun run copy-wasm` | Copies `sql-wasm.wasm` into `dist/` |
+| package | `bun run package` | Creates the production extension/webview bundles used for packaging |
+| vscode:prepublish | `bun run vscode:prepublish` | Runs the packaging build before publishing a VS Code extension |
+| check-types | `bun run check-types` | Type-checks both the extension and webview projects |
+| lint | `bun run lint` | Lints `src` and `webview-ui/src` |
 
 ### Environment Variables
 
@@ -139,7 +138,7 @@ webview-ui/
 
 ### Validation
 
-- `npm test` runs the regression check for local-time day bucketing in `src/db.ts`.
+- `bun test` runs the regression check for local-time day bucketing in `src/db.ts`.
 
 ---
 
