@@ -6,15 +6,4 @@ const SEG_COLORS = {
   cacheWrite: "#4ec9b0",
 };
 
-function stackedBarHtml(total: number, segments: Array<{ value: number; color: string }>): string {
-  if (total <= 0) {
-    return '<div class="card-bar-track"></div>';
-  }
-  const parts = segments
-    .filter((s) => s.value > 0)
-    .map((s) => `<div class="card-bar-seg" style="width:${((s.value / total) * 100).toFixed(1)}%;background:${s.color}"></div>`)
-    .join("");
-  return `<div class="card-bar-track">${parts}</div>`;
-}
-
-export { SEG_COLORS, stackedBarHtml };
+export { SEG_COLORS };

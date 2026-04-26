@@ -39,7 +39,7 @@ async function main() {
 	});
 
 	const webviewCtx = await esbuild.context({
-		entryPoints: ['webview-ui/src/main.ts'],
+		entryPoints: ['webview-ui/src/main.tsx'],
 		bundle: true,
 		format: 'iife',
 		minify: production,
@@ -48,6 +48,8 @@ async function main() {
 		platform: 'browser',
 		outfile: 'dist/webview-client.js',
 		logLevel: 'silent',
+		jsx: 'automatic',
+		jsxImportSource: 'preact',
 		plugins: [esbuildProblemMatcherPlugin],
 	});
 

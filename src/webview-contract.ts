@@ -88,6 +88,47 @@ type ModelPricingEntry = {
 
 type ModelPricing = Record<string, ModelPricingEntry>;
 
+type QuotaSummaryData = {
+  usedPercentage: number;
+  remainingPercentage: number;
+  nextResetTime: number;
+};
+
+type QuotaStateData = {
+  status: string;
+  message: string;
+  summary: QuotaSummaryData | null;
+};
+
+type HeroStatsData = {
+  todayTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  totalSteps: number;
+};
+
+type ProjectCardData = {
+  project: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheRead: number;
+  cacheWrite: number;
+  totalCost: number;
+  sessions: number;
+  steps: number;
+  duration: number;
+  models: DayModelUsage[];
+};
+
+type CostEntryData = {
+  modelId: string;
+  cost: number;
+  provider: string;
+  created: number;
+};
+
 type WebviewData = {
   dayData: DayDataItem[];
   dailyCharts: ChartConfig[];
@@ -99,6 +140,16 @@ type WebviewData = {
   modelPricing: ModelPricing;
   projectTokenBreakdowns: Record<string, TokenBreakdown>;
   projectModelIds: Record<string, string[]>;
+  quotaState: QuotaStateData;
+  hero: HeroStatsData;
+  projects: ProjectCardData[];
+  grandTokens: TokenBreakdown;
+  costEntries: CostEntryData[];
+  providers: string[];
+  threeMonthsAgo: number;
+  hasData: boolean;
+  hasDays: boolean;
+  hasProjects: boolean;
 };
 
 type CostFilterState = {
@@ -131,11 +182,16 @@ export type {
   ChartDayItem,
   ChartSeries,
   ChartValueKey,
+  CostEntryData,
   CostFilterState,
   DayDataItem,
   DayModelUsage,
+  HeroStatsData,
   ModelPricing,
   ModelPricingEntry,
+  ProjectCardData,
+  QuotaStateData,
+  QuotaSummaryData,
   TokenBar,
   TokenBreakdown,
   WebviewData,

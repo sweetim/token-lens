@@ -3,23 +3,8 @@ import { SEG_COLORS } from "../bars.js";
 import { formatDay, formatDurationMs, formatTokens } from "../format.js";
 import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelData, toOpenRouterModelId } from "../model-data.js";
 import type { ModelData } from "../model-data.js";
-import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens } from "../types.js";
-import type { ChartConfig, ChartDayItem, TokenBreakdown, WebviewData } from "../webview-contract.js";
-
-type WebviewRenderData = {
-  defaultTab: "projects" | "daily";
-  grandCost: number;
-  grandSteps: number;
-  grandTokens: TokenBreakdown;
-  grandTotal: number;
-  hasData: boolean;
-  hasDays: boolean;
-  hasProjects: boolean;
-  modelData: ModelData;
-  projectDaysByProject: Map<string, ProjectDayTokens[]>;
-  todayTotalTokens: number;
-  webviewData: WebviewData;
-};
+import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "../types.js";
+import type { ChartConfig, ChartDayItem, CostEntryData, ProjectCardData, QuotaStateData, TokenBreakdown, WebviewData } from "../webview-contract.js";
 
 function getDailyChartConfigs(): ChartConfig[] {
   return [
@@ -75,7 +60,7 @@ function mapChartDayData(row: DayTokens | ProjectDayTokens): ChartDayItem {
 }
 
 function buildProjectChartConfigs(projects: ProjectTokens[]): ChartConfig[] {
-  return projects.map((project, index) => ({
+  return projects.map((_project, index) => ({
     id: `project-total-chart-${index}`,
     title: "",
     valueFormat: "tokens",
@@ -127,16 +112,63 @@ function buildProjectModelIds(
   }));
 }
 
-async function buildWebviewRenderData(
+function buildQuotaStateData(quotaState: QuotaState): QuotaStateData {
+  return {
+    status: quotaState.status,
+    message: quotaState.message,
+    summary: quotaState.summary
+      ? {
+          usedPercentage: quotaState.summary.usedPercentage,
+          remainingPercentage: quotaState.summary.remainingPercentage,
+          nextResetTime: quotaState.summary.nextResetTime,
+        }
+      : null,
+  };
+}
+
+function buildProjectCardsData(projects: ProjectTokens[]): ProjectCardData[] {
+  return projects.map((project) => ({
+    project: project.project,
+    totalTokens: project.totalTokens,
+    inputTokens: project.inputTokens,
+    outputTokens: project.outputTokens,
+    reasoningTokens: project.reasoningTokens,
+    cacheRead: project.cacheRead,
+    cacheWrite: project.cacheWrite,
+    totalCost: project.totalCost,
+    sessions: project.sessions,
+    steps: project.steps,
+    duration: project.duration,
+    models: project.models.map((m) => ({ model: m.model, totalTokens: m.totalTokens })),
+  }));
+}
+
+function buildCostEntries(grandTokens: TokenBreakdown, modelData: ModelData): CostEntryData[] {
+  return Object.entries(modelData.pricing)
+    .map(([modelId, pricing]) => ({
+      modelId,
+      cost: (grandTokens.inputTokens * pricing.prompt)
+        + (grandTokens.outputTokens * pricing.completion)
+        + (grandTokens.reasoningTokens * pricing.completion)
+        + (grandTokens.cacheRead * pricing.cacheRead),
+      provider: modelId.split("/")[0],
+      created: modelData.createdDates[modelId] ?? 0,
+    }))
+    .filter((entry) => entry.cost > 0)
+    .sort((left, right) => left.cost - right.cost);
+}
+
+async function buildWebviewData(
   projects: ProjectTokens[],
   days: DayTokens[],
   projectDays: ProjectDayTokens[],
   modelCosts: ModelCost[],
-): Promise<WebviewRenderData> {
+  quotaState: QuotaState,
+): Promise<WebviewData> {
   const grandTotal = projects.reduce((sum, row) => sum + row.totalTokens, 0);
   const grandCost = projects.reduce((sum, row) => sum + row.totalCost, 0);
   const grandSteps = projects.reduce((sum, row) => sum + row.steps, 0);
-  const grandTokens = {
+  const grandTokens: TokenBreakdown = {
     inputTokens: projects.reduce((sum, row) => sum + row.inputTokens, 0),
     outputTokens: projects.reduce((sum, row) => sum + row.outputTokens, 0),
     reasoningTokens: projects.reduce((sum, row) => sum + row.reasoningTokens, 0),
@@ -148,6 +180,7 @@ async function buildWebviewRenderData(
   const dailyChartConfigs = getDailyChartConfigs();
   const projectChartConfigs = buildProjectChartConfigs(projects);
   const modelData = await fetchModelData();
+  const now = Date.now();
 
   const tokenTypes = [
     { key: "inputTokens", color: SEG_COLORS.input, label: "input" },
@@ -158,7 +191,10 @@ async function buildWebviewRenderData(
   ] as const;
 
   const summaryKeys = new Set(["inputTokens", "outputTokens"]);
-  const webviewData: WebviewData = {
+  const costEntries = buildCostEntries(grandTokens, modelData);
+  const providers = [...new Set(costEntries.map((entry) => entry.provider))].sort();
+
+  return {
     dayData: days.map((day) => {
       const dayMax = tokenTypes.reduce((max, tt) => Math.max(max, day[tt.key]), 0) || 1;
       return {
@@ -198,23 +234,22 @@ async function buildWebviewRenderData(
       },
     ])),
     projectModelIds: buildProjectModelIds(projects, modelCosts, modelData),
-  };
-
-  return {
-    defaultTab: webviewData.defaultTab,
-    grandCost,
-    grandSteps,
+    quotaState: buildQuotaStateData(quotaState),
+    hero: {
+      todayTokens: todayTotalTokens,
+      totalTokens: grandTotal,
+      totalCost: grandCost,
+      totalSteps: grandSteps,
+    },
+    projects: buildProjectCardsData(projects),
     grandTokens,
-    grandTotal,
+    costEntries,
+    providers,
+    threeMonthsAgo: (now - THREE_MONTHS_MS) / 1000,
     hasData: projects.length > 0 || days.length > 0,
     hasDays: days.length > 0,
     hasProjects: projects.length > 0,
-    modelData,
-    projectDaysByProject,
-    todayTotalTokens,
-    webviewData,
   };
 }
 
-export { buildWebviewRenderData };
-export type { WebviewRenderData };
+export { buildWebviewData };

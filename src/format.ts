@@ -29,10 +29,6 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 import dayjs from "dayjs";
 
 function formatDay(iso: string): string {
@@ -48,4 +44,4 @@ function formatDay(iso: string): string {
   return dayjs(iso).format("MMM D");
 }
 
-export { formatTokens, escapeHtml, formatDay, formatDurationMs };
+export { formatTokens, formatDay, formatDurationMs };

@@ -4,7 +4,6 @@ import { WEBVIEW_DATA_ELEMENT_ID } from "../webview-contract.js";
 import type { WebviewData } from "../webview-contract.js";
 
 type WebviewDocumentParams = {
-  bodyHtml: string;
   extensionUri: vscode.Uri;
   webview: vscode.Webview;
   webviewData: WebviewData;
@@ -37,7 +36,7 @@ function buildContentSecurityPolicy(webview: vscode.Webview, nonce: string): str
   ].join("; ");
 }
 
-function buildWebviewDocument({ bodyHtml, extensionUri, webview, webviewData }: WebviewDocumentParams): string {
+function buildWebviewDocument({ extensionUri, webview, webviewData }: WebviewDocumentParams): string {
   const nonce = createNonce();
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview-client.js"));
   const contentSecurityPolicy = buildContentSecurityPolicy(webview, nonce);
@@ -52,7 +51,7 @@ function buildWebviewDocument({ bodyHtml, extensionUri, webview, webviewData }: 
 </style>
 </head>
 <body>
-  ${bodyHtml}
+  <div id="root"></div>
   <script id="${WEBVIEW_DATA_ELEMENT_ID}" type="application/json">${serializeWebviewData(webviewData)}</script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>

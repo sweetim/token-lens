@@ -11,6 +11,7 @@ const STYLES = `
     --border: var(--vscode-widget-border, rgba(128,128,128,.25));
   }
   html, body { height: 100%; }
+  #root { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: var(--vscode-font-family, -apple-system, sans-serif);
