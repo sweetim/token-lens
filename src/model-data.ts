@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
 
 const ALLOWED_PROVIDERS = new Set(["openai", "deepseek", "moonshotai", "anthropic", "z-ai", "qwen", "minimax"]);
@@ -36,7 +38,7 @@ function toOpenRouterModelId(provider: string, model: string): string {
 }
 
 async function fetchModelData(): Promise<ModelData> {
-  const now = Date.now();
+  const now = dayjs().valueOf();
   if (cachedData && (now - cacheTimestamp) < CACHE_TTL_MS) {
     return cachedData;
   }

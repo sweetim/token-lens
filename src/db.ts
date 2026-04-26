@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import dayjs from "dayjs";
 import initSqlJs from "sql.js";
 import type { ProjectTokens, DayTokens, ProjectDayTokens, ModelCost, ModelUsage } from "./types.js";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 
-const tzOffsetMinutes = -new Date().getTimezoneOffset();
+const tzOffsetMinutes = -dayjs().utcOffset();
 const tzHours = Math.trunc(tzOffsetMinutes / 60);
 const tzMins = Math.abs(tzOffsetMinutes % 60);
 const tzSign = tzHours >= 0 ? "+" : "-";

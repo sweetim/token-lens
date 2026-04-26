@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { SEG_COLORS } from "../bars.js";
 import { formatDay, formatDurationMs, formatTokens } from "../format.js";
 import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelData, toOpenRouterModelId } from "../model-data.js";
@@ -140,7 +141,7 @@ async function buildWebviewRenderData(
     reasoningTokens: projects.reduce((sum, row) => sum + row.reasoningTokens, 0),
     cacheRead: projects.reduce((sum, row) => sum + row.cacheRead, 0),
   };
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = dayjs().format("YYYY-MM-DD");
   const todayTotalTokens = days.find((day) => day.day === todayKey)?.totalTokens ?? 0;
   const projectDaysByProject = buildProjectDaysByProject(projectDays);
   const dailyChartConfigs = getDailyChartConfigs();

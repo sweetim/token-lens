@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import dayjs from "dayjs";
 import { TokenSidebarProvider } from "./tokenSidebar";
 import type { QuotaSummary } from "./types.js";
 

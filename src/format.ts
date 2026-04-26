@@ -33,18 +33,19 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+import dayjs from "dayjs";
+
 function formatDay(iso: string): string {
-  const d = new Date(iso + "T00:00:00");
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const yesterday = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+  const now = dayjs();
+  const today = now.format("YYYY-MM-DD");
+  const yesterday = now.subtract(1, "day").format("YYYY-MM-DD");
   if (iso === today) {
     return "Today";
   }
   if (iso === yesterday) {
     return "Yesterday";
   }
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return dayjs(iso).format("MMM D");
 }
 
 export { formatTokens, escapeHtml, formatDay, formatDurationMs };
