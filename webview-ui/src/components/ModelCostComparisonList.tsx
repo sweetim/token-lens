@@ -15,6 +15,7 @@ type ModelCostComparisonListProps = {
   tooltipText?: string;
   listId?: string;
   listDataAttributes?: DataAttributes;
+  highlightModelIds?: Set<string>;
   isSaved?: (modelId: string) => boolean;
   onEntryClick?: (modelId: string) => void;
   getRowDataAttributes?: (entry: ModelCostComparisonEntry) => DataAttributes;
@@ -26,6 +27,7 @@ function ModelCostComparisonList({
   tooltipText,
   listId,
   listDataAttributes,
+  highlightModelIds,
   isSaved,
   onEntryClick,
   getRowDataAttributes,
@@ -59,7 +61,7 @@ function ModelCostComparisonList({
       {entries.map((entry) => (
         <div
           key={entry.modelId}
-          class={`model-cost-row${isSaved?.(entry.modelId) ? " saved" : ""}`}
+          class={`model-cost-row${highlightModelIds?.has(entry.modelId.replace(/^[^/]+\//, "")) ? " active" : ""}${isSaved?.(entry.modelId) ? " saved" : ""}`}
           onClick={onEntryClick ? () => onEntryClick(entry.modelId) : undefined}
           {...(getRowDataAttributes?.(entry) ?? {})}
         >

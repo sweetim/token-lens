@@ -526,6 +526,9 @@ const STYLES = `
     flex: 1 1 auto;
     margin-right: 12px;
   }
+  .model-cost-row.active .model-cost-id {
+    color: var(--accent);
+  }
   .model-cost-value {
     color: var(--accent);
     font-weight: 600;

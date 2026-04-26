@@ -137,6 +137,7 @@ function ProjectCard({
 }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
   const sortedModels = useMemo(() => [...project.models].sort((left, right) => right.totalTokens - left.totalTokens), [project.models]);
+  const usedModelIds = useMemo(() => new Set(project.models.map((model) => model.model.replace(/:.*$/, "").replace(/^[^/]+\//, ""))), [project.models]);
   const savedModels = getSavedModels();
   const modelCostIds = savedModels.length > 0 ? savedModels : allProjectModelIds;
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, projectTokenBreakdown);
@@ -175,6 +176,7 @@ function ProjectCard({
           <ModelCostComparisonList
             title="Model Cost Comparison"
             entries={modelCosts}
+            highlightModelIds={usedModelIds}
             tooltipText="This comparison uses models selected in the Cost tab. If none are selected, it compares only models used in this project"
             listDataAttributes={{ "data-project": project.project }}
           />
