@@ -9,7 +9,7 @@
   <img src="docs/images/landing.jpg" alt="Token Lens overview" width="700">
 </p>
 
-**Never lose track of your LLM spend again.** Real-time token usage right in your status bar, with rich analytics one click away.
+**Master your LLM spend with usage insights tailored to your coding style.**
 
 </div>
 
@@ -17,12 +17,9 @@
 
 - **Status bar indicator** — color-coded usage at a glance (normal, warning ≥50%, error ≥80%)
 - **Rich tooltip** — usage bar, percentage, and time until reset
-- **Quota recovery** — keeps the last successful quota snapshot during transient API failures and shows stale/unavailable states explicitly
 - **Sidebar analytics** — daily and per-project token breakdown
 - **LLM cost comparison** — compare usage costs to understand model spend at a glance
 - **Auto-refresh** — data updates every 5 minutes
-- **Secure storage** — API key stored via VS Code's SecretStorage
-- **Local timezone** — day grouping uses your local time, not UTC
 
 ## Supported Providers
 
