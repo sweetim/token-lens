@@ -4,6 +4,7 @@
 
 [![VS Code Version](https://img.shields.io/badge/VS_Code-1.116+-007ACC?style=flat-square&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version/timx.token-lens.svg)](https://marketplace.visualstudio.com/items?itemName=timx.token-lens)
 
 <p align="center">
   <img src="docs/images/landing.jpg" alt="Token Lens overview" width="700">
