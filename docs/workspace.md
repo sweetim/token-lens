@@ -172,9 +172,25 @@ webview-ui/
 | `src/webview/sections.ts` | Server-side HTML section renderers for the sidebar |
 | `webview-ui/tsconfig.json` | TypeScript config for browser-side code and shared cross-boundary files |
 | `webview-ui/src/bootstrap.ts` | Webview payload parsing and VS Code state persistence |
-| `webview-ui/src/charting.ts` | Browser-side chart and tooltip rendering |
-| `webview-ui/src/cost-panel.ts` | Browser-side cost filter/model pin interactions |
-| `webview-ui/src/daily-list.ts` | Browser-side daily virtual list controller |
+| `webview-ui/src/main.tsx` | Webview root that hydrates the Preact app and applies incremental payload updates |
+| `webview-ui/src/App.tsx` | Top-level tab switcher that wires shared payload data into the UI sections |
+| `webview-ui/src/constants.ts` | Shared browser-side presentation constants such as model colors |
+| `webview-ui/src/view-helpers.ts` | Small browser-side format helpers used across the webview components |
+| `webview-ui/src/components/QuotaSection.tsx` | Quota usage hero with reset timing and progress state rendering |
+| `webview-ui/src/components/HeroSection.tsx` | High-level token/cost summary hero for the sidebar landing area |
+| `webview-ui/src/components/TabsBar.tsx` | Shared tab strip for switching between Projects, Time, and Cost views |
+| `webview-ui/src/components/ProjectCard.tsx` | Project-level expandable card with stats, chart, model usage, and model-cost comparison |
+| `webview-ui/src/components/TimeTab.tsx` | Daily/weekly/monthly aggregation controller for the Time tab |
+| `webview-ui/src/components/DailyToolbar.tsx` | Time-tab period and cards/graph view toggles |
+| `webview-ui/src/components/DailyCardsView.tsx` | Virtualized day list renderer for the Time tab cards view |
+| `webview-ui/src/components/DayCard.tsx` | Expandable per-day card with token bars, model usage, and model-cost comparison |
+| `webview-ui/src/components/DailyGraphView.tsx` | Time-tab graph panel with summary stats, line charts, and model pie chart |
+| `webview-ui/src/components/Chart.tsx` | Shared line and pie chart rendering for project and daily analytics |
+| `webview-ui/src/components/CostTab.tsx` | Cost-tab container that manages provider, sort, and age filter state |
+| `webview-ui/src/components/CostFiltersPanel.tsx` | Cost-tab filter controls and collapse state UI |
+| `webview-ui/src/components/CostTokenSummary.tsx` | Cost-tab token summary strip |
+| `webview-ui/src/components/ModelCostComparisonList.tsx` | Shared model-cost list used by project, day, and cost views |
+| `webview-ui/src/components/AnchoredTooltip.tsx` | Shared anchored tooltip behavior for model-cost info affordances |
 | `icons/token-stack-lens.svg` | Current activity bar icon for the sidebar: stacked tokens with a magnifying lens |
 | `icons/zai.svg` | Legacy activity bar icon asset |
 | `icons/logo.png` | Extension marketplace icon (used in `package.json` `"icon"`) |
