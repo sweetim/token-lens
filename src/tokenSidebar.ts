@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 import { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
-import { getHtml } from "./html.js";
+import { getHtml, getHtmlFromData } from "./html.js";
 import { buildWebviewData } from "./webview/data.js";
 import type { QuotaState } from "./types.js";
+import type { WebviewData, WebviewOutboundMessage } from "./webview-contract.js";
 
 const DEFAULT_QUOTA_STATE: QuotaState = {
   status: "loading",
@@ -14,23 +15,46 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private quotaState: QuotaState = DEFAULT_QUOTA_STATE;
   private initialized = false;
+  private webviewReady = false;
+  private latestWebviewData?: WebviewData;
+  private refreshGeneration = 0;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
+    this.initialized = false;
+    this.webviewReady = false;
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "dist")],
     };
+    webviewView.webview.onDidReceiveMessage((message: WebviewOutboundMessage | undefined) => {
+      if (message?.type !== "ready") {
+        return;
+      }
+
+      if (webviewView !== this.view) {
+        return;
+      }
+
+      this.webviewReady = true;
+      if (this.latestWebviewData) {
+        void webviewView.webview.postMessage({ type: "fullUpdate", data: this.latestWebviewData });
+      }
+    });
     this.refresh();
   }
 
   public async refresh(quotaState: QuotaState = this.quotaState): Promise<void> {
     this.quotaState = quotaState;
-    if (!this.view) {
+    const currentView = this.view;
+    if (!currentView) {
       return;
     }
+
+    const refreshGeneration = ++this.refreshGeneration;
+
     try {
       const [projects, days, projectDays, modelCosts, projectModels, dayModels] = await Promise.all([
         queryProjectTokens(),
@@ -83,16 +107,41 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         }));
       }
 
+      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+        return;
+      }
+
+      const nextWebviewData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState);
+
+      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+        return;
+      }
+
+      this.latestWebviewData = nextWebviewData;
+
       if (!this.initialized) {
-        this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaState);
+        currentView.webview.html = getHtmlFromData({
+          extensionUri: this.extensionUri,
+          webview: currentView.webview,
+          webviewData: nextWebviewData,
+        });
         this.initialized = true;
-      } else {
-        const webviewData = await buildWebviewData(projects, days, projectDays, modelCosts, this.quotaState);
-        this.view.webview.postMessage({ type: "fullUpdate", data: webviewData });
+      } else if (this.webviewReady) {
+        void currentView.webview.postMessage({ type: "fullUpdate", data: nextWebviewData });
       }
     } catch {
+      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+        return;
+      }
+
       if (!this.initialized) {
-        this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaState);
+        const fallbackHtml = await getHtml(currentView.webview, this.extensionUri, [], [], [], [], quotaState);
+
+        if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+          return;
+        }
+
+        currentView.webview.html = fallbackHtml;
         this.initialized = true;
       }
     }

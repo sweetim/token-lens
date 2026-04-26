@@ -169,6 +169,10 @@ type WebviewInboundMessage = {
   data: WebviewData;
 };
 
+type WebviewOutboundMessage = {
+  type: "ready";
+};
+
 const DEFAULT_COST_FILTER_STATE: CostFilterState = {
   providers: [],
   sort: "asc",
@@ -201,5 +205,6 @@ export type {
   TokenBreakdown,
   WebviewData,
   WebviewInboundMessage,
+  WebviewOutboundMessage,
   WebviewPersistedState,
 };

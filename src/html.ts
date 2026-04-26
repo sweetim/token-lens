@@ -2,6 +2,17 @@ import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState 
 import * as vscode from "vscode";
 import { buildWebviewData } from "./webview/data.js";
 import { buildWebviewDocument } from "./webview/document.js";
+import type { WebviewData } from "./webview-contract.js";
+
+type WebviewHtmlParams = {
+  extensionUri: vscode.Uri;
+  webview: vscode.Webview;
+  webviewData: WebviewData;
+};
+
+function getHtmlFromData({ extensionUri, webview, webviewData }: WebviewHtmlParams): string {
+  return buildWebviewDocument({ extensionUri, webview, webviewData });
+}
 
 async function getHtml(
   webview: vscode.Webview,
@@ -13,7 +24,7 @@ async function getHtml(
   quotaState: QuotaState,
 ): Promise<string> {
   const webviewData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState);
-  return buildWebviewDocument({ extensionUri, webview, webviewData });
+  return getHtmlFromData({ extensionUri, webview, webviewData });
 }
 
-export { getHtml };
+export { getHtml, getHtmlFromData };

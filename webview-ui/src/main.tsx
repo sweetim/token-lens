@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useState, useEffect } from "preact/hooks";
 import { App } from "./App.js";
-import { readWebviewData } from "./bootstrap.js";
+import { postWebviewMessage, readWebviewData } from "./bootstrap.js";
 import type { WebviewData, WebviewInboundMessage } from "../../src/webview-contract.js";
 
 function Root() {
@@ -14,7 +14,9 @@ function Root() {
         setData(message.data);
       }
     }
+
     window.addEventListener("message", handleMessage);
+    postWebviewMessage({ type: "ready" });
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 

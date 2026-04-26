@@ -1,5 +1,5 @@
 import { DEFAULT_COST_FILTER_STATE, WEBVIEW_DATA_ELEMENT_ID } from "../../src/webview-contract.js";
-import type { CostFilterState, WebviewData, WebviewPersistedState } from "../../src/webview-contract.js";
+import type { CostFilterState, WebviewData, WebviewOutboundMessage, WebviewPersistedState } from "../../src/webview-contract.js";
 
 type VsCodeApi<State> = {
   getState(): State | undefined;
@@ -45,6 +45,10 @@ function readWebviewData(): WebviewData {
   return JSON.parse(dataElement.textContent ?? "{}") as WebviewData;
 }
 
+function postWebviewMessage(message: WebviewOutboundMessage): void {
+  vscodeApi?.postMessage(message);
+}
+
 function getCostFilterState(): CostFilterState {
   return normalizeCostFilterState(persistedState.costFilters);
 }
@@ -70,6 +74,7 @@ function setSavedModels(savedModels: string[]): void {
 export {
   getCostFilterState,
   getSavedModels,
+  postWebviewMessage,
   readWebviewData,
   setCostFilterState,
   setSavedModels,
