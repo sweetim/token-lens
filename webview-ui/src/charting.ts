@@ -228,7 +228,7 @@ function createChartController(data: WebviewData): ChartController {
           : "";
         const pointMarkers = points
           .map((point) =>
-            '<circle class="daily-chart-point" data-chart-id="' + escapeHtmlText(chartConfig.id) + '" data-day-index="' + point.dayIndex + '" data-series-key="' + escapeHtmlText(seriesItem.key) + '" cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="4" style="stroke:' + seriesItem.color + '"></circle>',
+            '<circle class="daily-chart-point" data-chart-id="' + escapeHtmlText(chartConfig.id) + '" data-day-index="' + point.dayIndex + '" data-series-key="' + escapeHtmlText(seriesItem.key) + '" cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="8" style="stroke:' + seriesItem.color + '"></circle>',
           )
           .join("");
 
