@@ -198,6 +198,8 @@ const periodButtons = document.querySelectorAll("[data-period]");
 const chartController = createChartController(data);
 let dailyListController = createDailyListController({
   dayData: data.dayData,
+  getSavedModels,
+  modelPricing: data.modelPricing,
   scroll: scroll instanceof HTMLElement ? scroll : null,
   spacerBottom: spacerBottom instanceof HTMLElement ? spacerBottom : null,
   spacerTop: spacerTop instanceof HTMLElement ? spacerTop : null,
@@ -273,6 +275,8 @@ function applyPeriod(period: Period): void {
 
   dailyListController = createDailyListController({
     dayData: aggregatedDayData,
+    getSavedModels,
+    modelPricing: data.modelPricing,
     scroll: scroll instanceof HTMLElement ? scroll : null,
     spacerBottom: spacerBottom instanceof HTMLElement ? spacerBottom : null,
     spacerTop: spacerTop instanceof HTMLElement ? spacerTop : null,

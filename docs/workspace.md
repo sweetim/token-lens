@@ -98,12 +98,16 @@ webview-ui/
 - Node.js (with npm)
 - VS Code ^1.116.0
 
+### Validation
+
+- `npm test` runs the regression check for local-time day bucketing in `src/db.ts`.
+
 ---
 
 ## Key Implementation Details
 
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
-- **DB Queries:** Uses Drizzle ORM with the `sql.js` driver (pure WASM SQLite, no native modules) to query the local SQLite database. `src/db.ts` defines typed table metadata for the external Kilo tables it reads (`part`, `message`, `session`, `project`), loads the database into memory from disk, and executes the reporting queries synchronously against that in-memory copy. The six queries are still project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries still extract `providerID` and `modelID` from the `message.data` JSON field through SQLite `json_extract(...)` expressions. All queries filter on `step-finish` type entries. Day grouping uses the local timezone offset (computed from `dayjs().utcOffset()`) rather than UTC, so daily totals align with the user's actual calendar day.
+- **DB Queries:** Uses Drizzle ORM with the `sql.js` driver (pure WASM SQLite, no native modules) to query the local SQLite database. `src/db.ts` defines typed table metadata for the external Kilo tables it reads (`part`, `message`, `session`, `project`), loads the database into memory from disk, and executes the reporting queries synchronously against that in-memory copy. The six queries are still project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries still extract `providerID` and `modelID` from the `message.data` JSON field through SQLite `json_extract(...)` expressions. All queries filter on `step-finish` type entries. Day grouping applies the runtime local UTC offset directly from `dayjs().utcOffset()` rather than UTC, so daily totals align with the user's actual calendar day.
 - **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
 - **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
@@ -121,6 +125,7 @@ webview-ui/
 | `tsconfig.json` | TypeScript config (strict, ES2022, Node16, `skipLibCheck` enabled for dependency compatibility) |
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
 | `.vscodeignore` | Files excluded from the packaged `.vsix`, with `.kilo/**` excluded and `node_modules/sql.js` explicitly re-included for runtime loading |
+| `test/db-timezone.test.mjs` | Node regression test that verifies local day bucketing keeps the correct timezone offset sign |
 | `src/webview-contract.ts` | Shared extension/webview payload and persisted-state types |
 | `src/webview-model-cost.ts` | Shared model-cost calculator used on both sides of the webview boundary |
 | `src/webview/data.ts` | Server-side webview payload builder |

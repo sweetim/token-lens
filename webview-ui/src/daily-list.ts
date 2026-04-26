@@ -1,6 +1,7 @@
+import { computeModelCostEstimates } from "../../src/webview-model-cost.js";
 import { MODEL_COLORS } from "./constants.js";
 import { escapeHtmlText } from "./view-helpers.js";
-import type { DayDataItem } from "../../src/webview-contract.js";
+import type { DayDataItem, ModelPricing } from "../../src/webview-contract.js";
 
 type DailyListController = {
   handleViewportClick(event: MouseEvent): void;
@@ -9,6 +10,8 @@ type DailyListController = {
 
 type DailyListControllerParams = {
   dayData: DayDataItem[];
+  getSavedModels(): string[];
+  modelPricing: ModelPricing;
   scroll: HTMLElement | null;
   spacerBottom: HTMLElement | null;
   spacerTop: HTMLElement | null;
@@ -21,6 +24,8 @@ const BUFFER = 4;
 
 function createDailyListController({
   dayData,
+  getSavedModels,
+  modelPricing,
   scroll,
   spacerBottom,
   spacerTop,
@@ -90,11 +95,38 @@ function createDailyListController({
       }
     }
 
+    const savedModels = getSavedModels();
+    let modelCostIds: string[];
+    if (savedModels.length > 0) {
+      modelCostIds = savedModels;
+    } else {
+      const ids = new Set<string>();
+      for (const m of item.models) {
+        const id = m.model.replace(/:.*$/, "");
+        if (modelPricing[id]) {
+          ids.add(id);
+        }
+      }
+      modelCostIds = [...ids];
+    }
+    const modelCostEstimates = computeModelCostEstimates(modelCostIds, modelPricing, {
+      inputTokens: item.inputTokens,
+      outputTokens: item.outputTokens,
+      reasoningTokens: item.reasoningTokens,
+      cacheRead: item.cacheRead,
+    });
+    const modelCostRows = modelCostEstimates.map(({ modelId, cost }) =>
+      '<div class="model-cost-row"><span class="model-cost-id">' + escapeHtmlText(modelId) + '</span><span class="model-cost-value">$' + cost.toFixed(2) + "</span></div>",
+    ).join("");
+    const modelCostHtml = modelCostRows
+      ? '<div class="model-cost-list"><div class="model-cost-header">Model Cost Comparison</div>' + modelCostRows + '</div>'
+      : "";
+
     return '<div class="day-group' + (expandedStates[index] ? ' expanded' : '') + '" data-index="' + index + '">'
       + '<div class="day-header"><span class="day-label">' + item.dayLabel + "</span></div>"
       + '<div class="day-meta"><span class="day-badge">' + item.totalTokensLabel + ' tokens</span><span class="day-badge">' + modelCount + ' model' + (modelCount !== 1 ? 's' : '') + '</span><span class="day-badge">' + item.duration + "</span></div>"
       + summaryBars
-      + '<div class="day-details">' + detailBars + modelBarHtml + "</div>"
+      + '<div class="day-details">' + detailBars + modelBarHtml + modelCostHtml + "</div>"
     + "</div>";
   }
 

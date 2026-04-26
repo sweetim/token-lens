@@ -11,11 +11,14 @@ import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens } from "./ty
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 const PROJECT_ROOT_PREFIX = `${homedir()}/projects/`;
 
-const tzOffsetMinutes = -dayjs().utcOffset();
-const tzHours = Math.trunc(tzOffsetMinutes / 60);
-const tzMins = Math.abs(tzOffsetMinutes % 60);
-const tzSign = tzHours >= 0 ? "+" : "-";
-const TZ_MODIFIER = `'unixepoch', '${tzSign}${Math.abs(tzHours)} hours'${tzMins ? `, '${tzSign}${tzMins} minutes'` : ""}`;
+function buildLocalTimezoneModifier(offsetMinutes: number): string {
+  const offsetHours = Math.trunc(offsetMinutes / 60);
+  const remainingMinutes = Math.abs(offsetMinutes % 60);
+  const offsetSign = offsetMinutes >= 0 ? "+" : "-";
+  return `'unixepoch', '${offsetSign}${Math.abs(offsetHours)} hours'${remainingMinutes ? `, '${offsetSign}${remainingMinutes} minutes'` : ""}`;
+}
+
+const localTimezoneModifier = buildLocalTimezoneModifier(dayjs().utcOffset());
 
 const partTable = sqliteTable("part", {
   id: text("id").primaryKey(),
@@ -56,7 +59,7 @@ const cacheWriteValue = sql<number | null>`CAST(json_extract(${partTable.data}, 
 const costValue = sql<number | null>`CAST(json_extract(${partTable.data}, '$.cost') AS REAL)`;
 const providerValue = sql<string>`json_extract(${messageTable.data}, '$.providerID')`;
 const modelValue = sql<string>`json_extract(${messageTable.data}, '$.modelID')`;
-const localDayValue = sql<string>`date(${partTable.timeCreated} / 1000, ${sql.raw(TZ_MODIFIER)})`;
+const localDayValue = sql<string>`date(${partTable.timeCreated} / 1000, ${sql.raw(localTimezoneModifier)})`;
 const projectNameValue = sql<string>`REPLACE(${projectTable.worktree}, ${PROJECT_ROOT_PREFIX}, '')`;
 const stepFinishCondition = sql`${stepType} = 'step-finish'`;
 
@@ -367,4 +370,12 @@ async function queryDayModels(): Promise<DayModelRow[]> {
   });
 }
 
-export { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels };
+export {
+  buildLocalTimezoneModifier,
+  queryProjectTokens,
+  queryDayTokens,
+  queryProjectDayTokens,
+  queryModelCosts,
+  queryProjectModels,
+  queryDayModels,
+};
