@@ -442,11 +442,66 @@ const STYLES = `
     border-top: 1px solid var(--border);
   }
   .model-cost-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: .5px;
     color: var(--muted);
     margin-bottom: 2px;
+  }
+  .model-cost-info {
+    display: inline-flex;
+    align-items: center;
+  }
+  .model-cost-info-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-radius: 999px;
+    cursor: help;
+    transition: color .15s;
+  }
+  .model-cost-info-button:hover,
+  .model-cost-info-button:focus-visible {
+    color: var(--fg);
+    outline: none;
+  }
+  .model-cost-info-icon {
+    width: 14px;
+    height: 14px;
+  }
+  .model-cost-info-tooltip-overlay {
+    position: fixed;
+    z-index: 1000;
+    width: min(220px, calc(100vw - 24px));
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card-bg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+    color: var(--fg);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: normal;
+    line-height: 1.4;
+    text-transform: none;
+    overflow-wrap: anywhere;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity .15s, transform .15s;
+  }
+  .model-cost-info-tooltip-overlay.visible {
+    opacity: 1;
+    transform: translateY(0);
   }
   .model-cost-row {
     display: flex;
@@ -580,7 +635,32 @@ const STYLES = `
   .daily-toolbar {
     padding: 10px 10px 0;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .period-toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .period-toggle-button {
+    border: none;
+    background: none;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+  .period-toggle-button.active {
+    color: var(--accent);
+    background: var(--border);
   }
   .view-toggle {
     display: inline-flex;

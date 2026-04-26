@@ -65,6 +65,7 @@ function buildProjectModelCostHtml(
 function buildGlobalCostTab(grandTokens: TokenBreakdown, modelData: ModelData): string {
   const now = Date.now();
   const threeMonthsAgo = (now - THREE_MONTHS_MS) / 1000;
+  const costModelInfoText = "Click a model to save it for cost comparison in the Projects tab";
   const entries = Object.entries(modelData.pricing)
     .map(([modelId, pricing]) => ({
       modelId,
@@ -113,7 +114,7 @@ function buildGlobalCostTab(grandTokens: TokenBreakdown, modelData: ModelData): 
         <button class="cost-age-filter" data-cost-age-toggle type="button">≤ 3 months</button>
       </div>
     </div>
-    <div class="model-cost-list" id="cost-model-list" data-three-months-ago="${threeMonthsAgo}"><div class="model-cost-header">Estimated Cost Per Model</div>${rows}</div>
+    <div class="model-cost-list" id="cost-model-list" data-three-months-ago="${threeMonthsAgo}"><div class="model-cost-header"><span>Estimated Cost Per Model</span><span class="model-cost-info"><button class="model-cost-info-button" type="button" aria-label="${escapeHtml(costModelInfoText)}" data-info-tooltip-text="${escapeHtml(costModelInfoText)}"><svg class="model-cost-info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4.75" r="1" fill="currentColor"/></svg></button></span></div>${rows}</div>
   </div>`;
 }
 
@@ -160,16 +161,16 @@ function buildDailyLineChart(days: DayTokens[], chartConfigs: ChartConfig[]): st
     <div class="daily-graph-panel">
       <div class="daily-graph-stats">
         <div class="daily-graph-stat">
-          <span class="daily-graph-stat-value">${formatTokens(latestDay.totalTokens)}</span>
-          <span class="daily-graph-stat-label">Latest Day</span>
+          <span class="daily-graph-stat-value" data-stat="latest-value">${formatTokens(latestDay.totalTokens)}</span>
+          <span class="daily-graph-stat-label" data-stat="latest-label">Latest Day</span>
         </div>
         <div class="daily-graph-stat">
-          <span class="daily-graph-stat-value">${formatTokens(averageTokens)}</span>
-          <span class="daily-graph-stat-label">Average / Day</span>
+          <span class="daily-graph-stat-value" data-stat="average-value">${formatTokens(averageTokens)}</span>
+          <span class="daily-graph-stat-label" data-stat="average-label">Average / Day</span>
         </div>
         <div class="daily-graph-stat">
-          <span class="daily-graph-stat-value">${formatTokens(peakDay.totalTokens)}</span>
-          <span class="daily-graph-stat-label">Peak (${escapeHtml(formatDay(peakDay.day))})</span>
+          <span class="daily-graph-stat-value" data-stat="peak-value">${formatTokens(peakDay.totalTokens)}</span>
+          <span class="daily-graph-stat-label" data-stat="peak-label">Peak (${escapeHtml(formatDay(peakDay.day))})</span>
         </div>
       </div>
       ${chartSections}

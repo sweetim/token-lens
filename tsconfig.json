@@ -11,6 +11,7 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
+		"skipLibCheck": true,
 	},
 	"include": ["src"],
 	"exclude": ["webview-ui"]

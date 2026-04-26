@@ -69,6 +69,7 @@ function mapChartDayData(row: DayTokens | ProjectDayTokens): ChartDayItem {
     sessions: row.sessions,
     steps: row.steps,
     duration: formatDurationMs(row.duration),
+    durationMs: row.duration,
     models: "models" in row ? row.models.map((model) => ({ model: model.model, totalTokens: model.totalTokens })) : [],
   };
 }
@@ -172,6 +173,7 @@ async function buildWebviewRenderData(
   const webviewData: WebviewData = {
     dayData: days.map((day) => ({
       ...mapChartDayData(day),
+      durationMs: day.duration,
       summaryBars: tokenTypes.filter((tokenType) => summaryKeys.has(tokenType.key)).map((tokenType) => ({
         label: tokenType.label,
         color: tokenType.color,

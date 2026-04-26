@@ -50,7 +50,7 @@ async function getHtml(
   ${renderData.hasData ? `
   <div class="tabs">
     <button class="tab ${renderData.defaultTab === "projects" ? "active" : ""}" data-tab="projects">Projects</button>
-    <button class="tab ${renderData.defaultTab === "daily" ? "active" : ""}" data-tab="daily">Daily</button>
+    <button class="tab ${renderData.defaultTab === "daily" ? "active" : ""}" data-tab="daily">Time</button>
     <button class="tab" data-tab="cost">$</button>
   </div>
   <div class="tab-content ${renderData.defaultTab === "projects" ? "active" : ""}" id="tab-projects">
@@ -60,6 +60,11 @@ async function getHtml(
     ${renderData.hasDays ? `
     <div class="daily-layout">
       <div class="daily-toolbar">
+        <div class="period-toggle" role="tablist" aria-label="Time period">
+          <button class="period-toggle-button active" data-period="daily" type="button">Daily</button>
+          <button class="period-toggle-button" data-period="weekly" type="button">Weekly</button>
+          <button class="period-toggle-button" data-period="monthly" type="button">Monthly</button>
+        </div>
         <div class="view-toggle" role="tablist" aria-label="Daily view mode">
           <button class="view-toggle-button active" data-daily-view="cards" type="button" aria-label="Cards"><svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="9.5" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="9.5" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" fill="currentColor"/></svg></button>
           <button class="view-toggle-button" data-daily-view="graph" type="button" aria-label="Graph"><svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14L5.5 8L8.5 10.5L14 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>

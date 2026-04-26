@@ -92,6 +92,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.20",
+    "drizzle-orm": "^0.45.2",
     "sql.js": "^1.14.1"
   }
 }

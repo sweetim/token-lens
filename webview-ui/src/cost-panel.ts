@@ -26,6 +26,63 @@ function createCostPanelController({
   let ageFilterActive = initialCostFilterState.ageFilter;
   let currentSortOrder: "asc" | "desc" = initialCostFilterState.sort;
   let filtersCollapsed = initialCostFilterState.collapsed;
+  let activeInfoTooltipTrigger: HTMLElement | null = null;
+  let infoTooltipElement: HTMLDivElement | null = null;
+
+  function getInfoTooltipElement(): HTMLDivElement {
+    if (infoTooltipElement) {
+      return infoTooltipElement;
+    }
+
+    infoTooltipElement = document.createElement("div");
+    infoTooltipElement.className = "model-cost-info-tooltip-overlay";
+    document.body.appendChild(infoTooltipElement);
+    return infoTooltipElement;
+  }
+
+  function hideInfoTooltip(): void {
+    activeInfoTooltipTrigger = null;
+    if (!infoTooltipElement) {
+      return;
+    }
+
+    infoTooltipElement.classList.remove("visible");
+    infoTooltipElement.textContent = "";
+  }
+
+  function showInfoTooltip(trigger: HTMLElement): void {
+    const tooltipText = trigger.dataset.infoTooltipText?.trim();
+    if (!tooltipText) {
+      hideInfoTooltip();
+      return;
+    }
+
+    const tooltipElement = getInfoTooltipElement();
+    activeInfoTooltipTrigger = trigger;
+    tooltipElement.textContent = tooltipText;
+    tooltipElement.classList.remove("visible");
+    tooltipElement.style.left = "12px";
+    tooltipElement.style.top = "12px";
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const viewportMargin = 12;
+    const tooltipGap = 8;
+    let left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
+    let top = triggerRect.bottom + tooltipGap;
+
+    left = Math.max(viewportMargin, Math.min(left, viewportWidth - tooltipRect.width - viewportMargin));
+
+    if (top + tooltipRect.height > viewportHeight - viewportMargin) {
+      top = Math.max(viewportMargin, triggerRect.top - tooltipRect.height - tooltipGap);
+    }
+
+    tooltipElement.style.left = `${Math.round(left)}px`;
+    tooltipElement.style.top = `${Math.round(top)}px`;
+    tooltipElement.classList.add("visible");
+  }
 
   function saveCurrentCostFilterState(): void {
     setCostFilterState({
@@ -147,6 +204,28 @@ function createCostPanelController({
   }
 
   function initialize(): void {
+    document.querySelectorAll<HTMLElement>("[data-info-tooltip-text]").forEach((trigger) => {
+      trigger.addEventListener("mouseenter", () => {
+        showInfoTooltip(trigger);
+      });
+      trigger.addEventListener("focus", () => {
+        showInfoTooltip(trigger);
+      });
+      trigger.addEventListener("mouseleave", hideInfoTooltip);
+      trigger.addEventListener("blur", hideInfoTooltip);
+    });
+
+    document.addEventListener("scroll", () => {
+      if (activeInfoTooltipTrigger) {
+        hideInfoTooltip();
+      }
+    }, true);
+    window.addEventListener("resize", () => {
+      if (activeInfoTooltipTrigger) {
+        hideInfoTooltip();
+      }
+    });
+
     const costFilterToggle = document.querySelector<HTMLElement>("[data-cost-filter-toggle]");
     if (costFilterToggle) {
       costFilterToggle.addEventListener("click", () => {

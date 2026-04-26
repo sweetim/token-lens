@@ -24,6 +24,7 @@ type DayDataItem = {
   sessions: number;
   steps: number;
   duration: string;
+  durationMs: number;
   models: DayModelUsage[];
   summaryBars: TokenBar[];
   detailBars: TokenBar[];
@@ -68,6 +69,7 @@ type ChartDayItem = {
   sessions: number;
   steps: number;
   duration: string;
+  durationMs: number;
   models: DayModelUsage[];
 };
 
