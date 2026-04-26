@@ -164,6 +164,11 @@ type WebviewPersistedState = {
   savedModels: string[];
 };
 
+type WebviewInboundMessage = {
+  type: "fullUpdate";
+  data: WebviewData;
+};
+
 const DEFAULT_COST_FILTER_STATE: CostFilterState = {
   providers: [],
   sort: "asc",
@@ -195,5 +200,6 @@ export type {
   TokenBar,
   TokenBreakdown,
   WebviewData,
+  WebviewInboundMessage,
   WebviewPersistedState,
 };

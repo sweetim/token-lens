@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "preact/hooks";
+import { useState, useCallback, useMemo, useEffect } from "preact/hooks";
 import { computeModelCostEstimates } from "../../src/webview-model-cost.js";
 import { MODEL_COLORS } from "./constants.js";
 import { formatTokensCompact } from "./view-helpers.js";
@@ -174,14 +174,52 @@ function ProjectCard({
     </div>
   ) : null;
 
+  const [infoTooltip, setInfoTooltip] = useState<{ text: string; left: number; top: number } | null>(null);
+
+  const showInfoTooltip = useCallback((trigger: HTMLElement, text: string) => {
+    const rect = trigger.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    const tw = 220;
+    const th = 60;
+    const margin = 12;
+    const gap = 8;
+    let left = rect.left + rect.width / 2 - tw / 2;
+    let top = rect.bottom + gap;
+    left = Math.max(margin, Math.min(left, vw - tw - margin));
+    if (top + th > vh - margin) top = Math.max(margin, rect.top - th - gap);
+    setInfoTooltip({ text, left: Math.round(left), top: Math.round(top) });
+  }, []);
+
+  useEffect(() => {
+    const hide = () => setInfoTooltip(null);
+    document.addEventListener("scroll", hide, true);
+    return () => document.removeEventListener("scroll", hide, true);
+  }, []);
+
   const savedModels = getSavedModels();
   const modelCostIds = savedModels.length > 0 ? savedModels : allProjectModelIds;
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, projectTokenBreakdown);
+
+  const tooltipText = "This comparison uses models selected in the Cost tab. If none are selected, it compares only models used in this project";
 
   const modelCostHtml = modelCosts.length > 0 ? (
     <div class="model-cost-list" data-project={project.project}>
       <div class="model-cost-header">
         <span>Model Cost Comparison</span>
+        <span class="model-cost-info">
+          <button
+            class="model-cost-info-button"
+            type="button"
+            aria-label={tooltipText}
+            onMouseEnter={(e) => showInfoTooltip(e.currentTarget, tooltipText)}
+            onFocus={(e) => showInfoTooltip(e.currentTarget, tooltipText)}
+            onMouseLeave={() => setInfoTooltip(null)}
+            onBlur={() => setInfoTooltip(null)}
+          >
+            <svg class="model-cost-info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.5" /><path d="M8 7.1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /><circle cx="8" cy="4.75" r="1" fill="currentColor" /></svg>
+          </button>
+        </span>
       </div>
       {modelCosts.map(({ modelId, cost }) => (
         <div key={modelId} class="model-cost-row">
@@ -189,6 +227,12 @@ function ProjectCard({
           <span class="model-cost-value">${cost.toFixed(2)}</span>
         </div>
       ))}
+    </div>
+  ) : null;
+
+  const infoTooltipHtml = infoTooltip ? (
+    <div class="model-cost-info-tooltip-overlay visible" style={{ left: infoTooltip.left + "px", top: infoTooltip.top + "px" }}>
+      {infoTooltip.text}
     </div>
   ) : null;
 
@@ -236,6 +280,7 @@ function ProjectCard({
           </div>
           {modelUsageHtml}
           {modelCostHtml}
+          {infoTooltipHtml}
         </div>
       )}
     </div>

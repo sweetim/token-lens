@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
 import { getHtml } from "./html.js";
+import { buildWebviewData } from "./webview/data.js";
 import type { QuotaState } from "./types.js";
 
 const DEFAULT_QUOTA_STATE: QuotaState = {
@@ -12,6 +13,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "token-lens.tokenSidebar";
   private view?: vscode.WebviewView;
   private quotaState: QuotaState = DEFAULT_QUOTA_STATE;
+  private initialized = false;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -81,9 +83,18 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         }));
       }
 
-      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaState);
+      if (!this.initialized) {
+        this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, projects, days, projectDays, modelCosts, this.quotaState);
+        this.initialized = true;
+      } else {
+        const webviewData = await buildWebviewData(projects, days, projectDays, modelCosts, this.quotaState);
+        this.view.webview.postMessage({ type: "fullUpdate", data: webviewData });
+      }
     } catch {
-      this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaState);
+      if (!this.initialized) {
+        this.view.webview.html = await getHtml(this.view.webview, this.extensionUri, [], [], [], [], this.quotaState);
+        this.initialized = true;
+      }
     }
   }
 }

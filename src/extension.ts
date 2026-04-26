@@ -362,7 +362,7 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
       refreshTimer = undefined;
     }
 
-    if (showLoadingState && !quotaState.summary) {
+    if (showLoadingState) {
       await setQuotaState(LOADING_QUOTA_STATE);
     }
 

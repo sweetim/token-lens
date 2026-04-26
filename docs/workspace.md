@@ -16,7 +16,7 @@
 ```
 src/
 ├── extension.ts      # Extension entry point — status bar item, commands, quota polling, persisted snapshot recovery, and retry scheduling
-├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel
+├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel; uses HTML injection on first load, then postMessage for incremental updates
 ├── html.ts           # Assembles the sidebar shell HTML from shared webview data/section builders
 ├── db.ts             # Queries the local Kilo SQLite database via Drizzle ORM on top of the `sql.js` SQLite driver
 ├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, ModelUsage, ModelCost, QuotaSummary, QuotaState, and QuotaStateStatus type definitions
@@ -33,7 +33,7 @@ src/
 └── sql.js.d.ts       # Custom type declarations for the sql.js WASM module
 webview-ui/
 └── src/
-    ├── bootstrap.ts  # Reads the JSON payload and persists UI state via VS Code webview state
+    ├── bootstrap.ts  # Reads the JSON payload, persists UI state via VS Code webview state, and listens for postMessage data updates
     ├── charting.ts   # SVG chart, tooltip, legend-toggle, and pie-chart rendering
     ├── cost-panel.ts # Cost filters, model pinning, and project cost-list re-rendering
     ├── daily-list.ts # Virtualized daily cards list and expand/collapse measurement logic
@@ -70,7 +70,7 @@ webview-ui/
         - **Cards view:** Virtualized scrollable list of day-by-day usage with horizontal bar charts. Each day's bars are scaled relative to that day's highest token type value (not across all days), so the dominant token type always fills 100%. Rows support expand/collapse, and the virtual list measures rendered row heights so long lists remain performant even when rows expand.
         - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), Sessions And Steps, and LLM Usage (pie chart). Summary stat labels and chart data update with the active daily/weekly/monthly aggregation, and series can be toggled via legend buttons.
       - **$ tab:** Estimated per-model cost list with provider/sort/age filters. Clicking a model in this list pins it in webview state so the saved models are reused for project-level cost comparisons in the Projects tab.
-     - **Data injection:** `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag; `webview-ui/src/bootstrap.ts` parses that payload and the browser modules render charts client-side.
+     - **Data injection:** On first load, `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag and `webview-ui/src/bootstrap.ts` parses it. Subsequent updates are sent via `postMessage` with a `{ type: "fullUpdate", data: WebviewData }` message, received by the `Root` wrapper in `webview-ui/src/main.tsx` which updates Preact state incrementally — preserving scroll position, active tab, expanded cards, and filter state.
      - **Webview persistence:** cost filters and pinned models are stored with VS Code webview state (`acquireVsCodeApi().getState()/setState()`) instead of `localStorage`.
 
 ### Commands
@@ -147,7 +147,7 @@ webview-ui/
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
 - **DB Queries:** Uses Drizzle ORM with the `sql.js` driver (pure WASM SQLite, no native modules) to query the local SQLite database. `src/db.ts` defines typed table metadata for the external Kilo tables it reads (`part`, `message`, `session`, `project`), loads the database into memory from disk, and executes the reporting queries synchronously against that in-memory copy. The six queries are still project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries still extract `providerID` and `modelID` from the `message.data` JSON field through SQLite `json_extract(...)` expressions. All queries filter on `step-finish` type entries. Day grouping applies the runtime local UTC offset directly from `dayjs().utcOffset()` rather than UTC, so daily totals align with the user's actual calendar day.
 - **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
-- **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably.
+- **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably. On first load the full HTML document is injected with all data; subsequent data updates are pushed via `postMessage` to avoid destroying Preact component state (scroll position, tab selection, expanded cards, filters).
 - **Quota Recovery:** The extension stores the last successful quota snapshot in VS Code `globalState`, restores it for startup recovery when available, clears it on setup/auth errors, and uses timeout-based retry backoff for transient z.ai failures.
 - **Daily Virtual List:** The daily tab uses measured-height virtualization with top and bottom spacers. Rendered row heights are cached and recalculated after expand/collapse so scroll positioning stays accurate for long datasets.
 - **Runtime Dependencies:** `vscode` remains external to the bundle. `dayjs` is used at runtime for local-day grouping, model-data cache timing, and date-based summaries. `drizzle-orm` is bundled into `dist/extension.js` as the typed query layer. `sql.js` still provides the runtime SQLite engine, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js`, which now boots from a JSON payload script rather than `window.__TOKEN_LENS_DATA__`.
@@ -165,7 +165,7 @@ webview-ui/
 | `eslint.config.mjs` | ESLint flat config with typescript-eslint |
 | `.vscodeignore` | Files excluded from the packaged `.vsix`, with `.kilo/**` excluded and `node_modules/sql.js` explicitly re-included for runtime loading |
 | `test/db-timezone.test.mjs` | Node regression test that verifies local day bucketing keeps the correct timezone offset sign |
-| `src/webview-contract.ts` | Shared extension/webview payload and persisted-state types |
+| `src/webview-contract.ts` | Shared extension/webview payload, message, and persisted-state types |
 | `src/webview-model-cost.ts` | Shared model-cost calculator used on both sides of the webview boundary |
 | `src/webview/data.ts` | Server-side webview payload builder |
 | `src/webview/document.ts` | Webview HTML document builder with JSON payload + CSP |

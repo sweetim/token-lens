@@ -10,14 +10,17 @@
     "theme": "dark"
   },
   "keywords": [
+    "vscode",
+    "statusbar",
+    "llm",
     "token",
     "usage",
-    "llm",
-    "ai",
+    "quota",
     "cost",
+    "comparison",
     "analytics",
-    "monitor",
     "dashboard",
+    "monitoring",
     "tokenlens"
   ],
   "homepage": "https://github.com/sweetim/token-lens#readme",
