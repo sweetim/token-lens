@@ -64,13 +64,33 @@
     "commands": [
       {
         "command": "token-lens.refresh",
-        "title": "TokenLens: Refresh"
+        "title": "TokenLens: Refresh",
+        "icon": "$(refresh)"
       },
       {
         "command": "token-lens.setApiKey",
         "title": "TokenLens: Set API Key"
+      },
+      {
+        "command": "token-lens.openSettings",
+        "title": "TokenLens: Settings",
+        "icon": "$(settings-gear)"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "token-lens.refresh",
+          "when": "view == token-lens.tokenSidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "token-lens.openSettings",
+          "when": "view == token-lens.tokenSidebar",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "test": "bun test test/*.test.mjs",

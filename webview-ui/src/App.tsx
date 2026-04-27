@@ -1,16 +1,30 @@
 import { useState } from "preact/hooks";
-import type { WebviewData } from "../../src/webview-contract.js";
+import type { WebviewData, SettingsData } from "../../src/webview-contract.js";
 import { getCostFilterState, getSavedModels, setCostFilterState, setSavedModels } from "./bootstrap.js";
 import { CostTab } from "./components/CostTab.js";
 import { HeroSection } from "./components/HeroSection.js";
 import { ProjectCard } from "./components/ProjectCard.js";
 import { QuotaSection } from "./components/QuotaSection.js";
+import { SettingsPanel } from "./components/SettingsPanel.js";
 import { TabsBar } from "./components/TabsBar.js";
 import { TimeTab } from "./components/TimeTab.js";
 import type { AppTab } from "./components/TabsBar.js";
+import { useIntersectionLazyLoad } from "./hooks/useIntersectionLazyLoad.js";
 
-function App({ data }: { data: WebviewData }) {
+type AppProps = {
+  data: WebviewData;
+  settings?: SettingsData;
+  showSettings?: boolean;
+  onCloseSettings?: () => void;
+};
+
+function App({ data, settings, showSettings, onCloseSettings }: AppProps) {
   const [activeTab, setActiveTab] = useState<AppTab>(data.defaultTab);
+  const { visibleCount: visibleProjects, sentinelRef: projectsSentinelRef } = useIntersectionLazyLoad(data.projects.length);
+
+  if (showSettings && settings && onCloseSettings) {
+    return <SettingsPanel settings={settings} onClose={onCloseSettings} />;
+  }
 
   if (!data.hasData) {
     return (
@@ -31,7 +45,7 @@ function App({ data }: { data: WebviewData }) {
         <div class={`tab-content${activeTab === "projects" ? " active" : ""}`} id="tab-projects">
           {data.hasProjects ? (
             <div class="cards">
-              {data.projects.map((project, index) => {
+              {data.projects.slice(0, visibleProjects).map((project, index) => {
                 const chartConfig = data.projectCharts[index] ?? null;
                 const chartData = chartConfig ? (data.projectChartDataSets[chartConfig.id] ?? []) : [];
                 const tokenBreakdown = data.projectTokenBreakdowns[project.project];
@@ -49,6 +63,9 @@ function App({ data }: { data: WebviewData }) {
                   />
                 );
               })}
+              {visibleProjects < data.projects.length && (
+                <div ref={projectsSentinelRef} class="vlist-sentinel" />
+              )}
             </div>
           ) : <p class="empty">No project token usage data found.</p>}
         </div>

@@ -709,6 +709,7 @@ const STYLES = `
     padding: 10px 10px 20px;
   }
   .vlist-spacer { width: 100%; }
+  .vlist-sentinel { width: 100%; height: 1px; }
   .day-group {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -971,6 +972,111 @@ const STYLES = `
   .empty {
     color: var(--muted); padding: 40px 16px;
     text-align: center; font-size: 12px; line-height: 1.6;
+  }
+
+  .settings-panel {
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .settings-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+  }
+  .settings-close:hover {
+    color: var(--fg);
+    background: var(--border);
+  }
+  .settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .settings-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+  }
+  .settings-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .settings-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--fg);
+    background: var(--vscode-input-background, rgba(0,0,0,.3));
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    outline: none;
+  }
+  .settings-input:focus {
+    border-color: var(--accent);
+  }
+  .settings-input-readonly {
+    opacity: .8;
+    cursor: default;
+  }
+  .settings-btn-icon {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+  }
+  .settings-btn-icon:hover {
+    color: var(--fg);
+    background: var(--border);
+  }
+  .settings-btn {
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg);
+    background: var(--vscode-button-secondaryBackground, rgba(90,93,94,.3));
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .settings-btn:hover {
+    background: var(--vscode-button-secondaryHoverBackground, rgba(90,93,94,.5));
+  }
+  .settings-btn:disabled {
+    opacity: .4;
+    cursor: default;
+  }
+  .settings-hint {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.4;
   }
 `;
 

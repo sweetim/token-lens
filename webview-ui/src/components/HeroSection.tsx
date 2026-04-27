@@ -4,7 +4,7 @@ import { formatTokensCompact } from "../view-helpers.js";
 function HeroSection({ hero }: { hero: HeroStatsData }) {
   return (
     <div class="hero">
-      <div class="hero-title">Kilo Total Token Usage</div>
+      <div class="hero-title">Total Token Usage</div>
       <div class="hero-grid">
         <div class="hero-stat"><span class="val today">{formatTokensCompact(hero.todayTokens)}</span><span class="lbl">Today</span></div>
         <div class="hero-stat"><span class="val tokens">{formatTokensCompact(hero.totalTokens)}</span><span class="lbl">Total</span></div>

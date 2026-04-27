@@ -77,9 +77,8 @@ function DayCard({ item, index, expanded, onToggle, modelPricing, getSavedModels
     : (() => {
         const ids = new Set<string>();
         for (const model of item.models) {
-          const id = model.model.replace(/:.*$/, "");
-          if (modelPricing[id]) {
-            ids.add(id);
+          if (modelPricing[model.openRouterModelId]) {
+            ids.add(model.openRouterModelId);
           }
         }
         return [...ids];
@@ -104,7 +103,7 @@ function DayCard({ item, index, expanded, onToggle, modelPricing, getSavedModels
           <TokenBarRow key={bar.label} bar={bar} />
         ))}
         <DayModelUsage models={item.models} />
-        <ModelCostComparisonList title="Model Cost Comparison" entries={modelCosts} highlightModelIds={usedModelIds} />
+        <ModelCostComparisonList title="Model Cost Comparison" entries={modelCosts} highlightModelIds={usedModelIds} tooltipText="This comparison uses models selected in the Cost tab. If none are selected, it compares only models used in this period" />
       </div>
     </div>
   );

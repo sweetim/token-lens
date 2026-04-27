@@ -33,7 +33,9 @@ type QuotaFetchResult =
   | { type: "invalidResponse"; message: string };
 
 const QUOTA_SNAPSHOT_STORAGE_KEY = "token-lens.quotaSnapshot";
-const NORMAL_REFRESH_DELAY_MS = 5 * 60 * 1000;
+const REFRESH_INTERVAL_STORAGE_KEY = "token-lens.refreshIntervalMinutes";
+const DEFAULT_REFRESH_INTERVAL_MINUTES = 5;
+const NORMAL_REFRESH_DELAY_MS = DEFAULT_REFRESH_INTERVAL_MINUTES * 60 * 1000;
 const TRANSIENT_RETRY_DELAYS_MS = [10000, 30000, 60000, 120000, 300000] as const;
 const LOADING_QUOTA_STATE: QuotaState = {
   status: "loading",
@@ -233,6 +235,18 @@ let quotaState: QuotaState = LOADING_QUOTA_STATE;
 let persistedQuotaSummary: QuotaSummary | undefined;
 let consecutiveTransientFailures = 0;
 
+function getRefreshIntervalMinutes(): number {
+  return extensionContext.globalState.get<number>(REFRESH_INTERVAL_STORAGE_KEY) ?? DEFAULT_REFRESH_INTERVAL_MINUTES;
+}
+
+async function saveRefreshIntervalMinutes(minutes: number): Promise<void> {
+  await extensionContext.globalState.update(REFRESH_INTERVAL_STORAGE_KEY, minutes);
+}
+
+function getRefreshDelayMs(): number {
+  return getRefreshIntervalMinutes() * 60 * 1000;
+}
+
 function getLastSuccessfulQuotaSummary(): QuotaSummary | undefined {
   return quotaState.summary ?? persistedQuotaSummary;
 }
@@ -376,7 +390,7 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
         message: "",
         summary: result.quotaSummary,
       });
-      scheduleRefresh(NORMAL_REFRESH_DELAY_MS);
+      scheduleRefresh(getRefreshDelayMs());
       return;
     }
 
@@ -387,7 +401,7 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
         status: "missingApiKey",
         message: "Set your z.ai API key to load quota usage.",
       });
-      scheduleRefresh(NORMAL_REFRESH_DELAY_MS);
+      scheduleRefresh(getRefreshDelayMs());
       return;
     }
 
@@ -398,13 +412,13 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
         status: "authError",
         message: result.message,
       });
-      scheduleRefresh(NORMAL_REFRESH_DELAY_MS);
+      scheduleRefresh(getRefreshDelayMs());
       return;
     }
 
     if (result.type === "rateLimited") {
       consecutiveTransientFailures = 0;
-      const retryDelayMs = Math.max(result.retryAfterMs ?? NORMAL_REFRESH_DELAY_MS, 1000);
+      const retryDelayMs = Math.max(result.retryAfterMs ?? getRefreshDelayMs(), 1000);
       const retryMessage = `Rate limited by z.ai. Retrying in ${formatDelay(retryDelayMs)}.`;
       const lastQuotaSummary = getLastSuccessfulQuotaSummary();
       await setQuotaState(lastQuotaSummary
@@ -455,6 +469,19 @@ export function activate(context: vscode.ExtensionContext): void {
   persistedQuotaSummary = isQuotaSummary(storedQuotaSummary) ? storedQuotaSummary : undefined;
 
   tokenSidebar = new TokenSidebarProvider(context.extensionUri);
+  tokenSidebar.setSettingsCallbacks({
+    getApiKey: () => Promise.resolve(secrets.get("apiKey")),
+    saveApiKey: async (apiKey: string) => {
+      await secrets.store("apiKey", apiKey);
+      vscode.window.showInformationMessage("API key saved securely.");
+      await refreshQuota(true);
+    },
+    getRefreshIntervalMinutes,
+    saveRefreshIntervalMinutes: async (minutes: number) => {
+      await saveRefreshIntervalMinutes(minutes);
+      scheduleRefresh(getRefreshDelayMs());
+    },
+  });
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(TokenSidebarProvider.viewType, tokenSidebar),
   );
@@ -486,6 +513,12 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage("API key saved securely.");
         await refreshQuota(true);
       }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("token-lens.openSettings", () => {
+      tokenSidebar.showSettings();
     }),
   );
 

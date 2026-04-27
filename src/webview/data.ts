@@ -55,7 +55,7 @@ function mapChartDayData(row: DayTokens | ProjectDayTokens): ChartDayItem {
     steps: row.steps,
     duration: formatDurationMs(row.duration),
     durationMs: row.duration,
-    models: "models" in row ? row.models.map((model) => ({ model: model.model, totalTokens: model.totalTokens })) : [],
+    models: "models" in row ? row.models.map((model) => ({ model: model.model, openRouterModelId: toOpenRouterModelId(model.provider, model.model), totalTokens: model.totalTokens })) : [],
   };
 }
 
@@ -139,7 +139,7 @@ function buildProjectCardsData(projects: ProjectTokens[]): ProjectCardData[] {
     sessions: project.sessions,
     steps: project.steps,
     duration: project.duration,
-    models: project.models.map((m) => ({ model: m.model, totalTokens: m.totalTokens })),
+    models: project.models.map((m) => ({ model: m.model, openRouterModelId: toOpenRouterModelId(m.provider, m.model), totalTokens: m.totalTokens })),
   }));
 }
 

@@ -371,6 +371,7 @@ async function queryDayModels(): Promise<DayModelRow[]> {
 }
 
 export {
+  DB_PATH,
   buildLocalTimezoneModifier,
   queryProjectTokens,
   queryDayTokens,

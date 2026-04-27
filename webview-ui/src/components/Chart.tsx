@@ -345,12 +345,24 @@ function PieChart({ days, periodUnit }: { days: ChartDayItem[]; periodUnit: stri
               return null;
             }
 
+            const color = MODEL_COLORS[index % MODEL_COLORS.length];
+
+            if (angle >= 2 * Math.PI - 0.001) {
+              const midAngle = startAngle + Math.PI;
+              const mx = centerX + radius * Math.cos(midAngle);
+              const my = centerY + radius * Math.sin(midAngle);
+              const x1 = centerX + radius * Math.cos(startAngle);
+              const y1 = centerY + radius * Math.sin(startAngle);
+              const pathData = `M ${centerX} ${centerY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 1 1 ${mx.toFixed(2)} ${my.toFixed(2)} A ${radius} ${radius} 0 1 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+              startAngle = endAngle;
+              return <path key={entry.model} class="pie-slice" d={pathData} fill={color} />;
+            }
+
             const x1 = centerX + radius * Math.cos(startAngle);
             const y1 = centerY + radius * Math.sin(startAngle);
             const x2 = centerX + radius * Math.cos(endAngle);
             const y2 = centerY + radius * Math.sin(endAngle);
             const largeArc = angle > Math.PI ? 1 : 0;
-            const color = MODEL_COLORS[index % MODEL_COLORS.length];
             const pathData = `M ${centerX} ${centerY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
             startAngle = endAngle;
 

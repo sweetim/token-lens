@@ -1,13 +1,43 @@
 import * as vscode from "vscode";
-import { queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
+import { DB_PATH, queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
 import { getHtml, getHtmlFromData } from "./html.js";
 import { buildWebviewData } from "./webview/data.js";
 import type { QuotaState } from "./types.js";
-import type { WebviewData, WebviewOutboundMessage } from "./webview-contract.js";
+import type { SettingsData, WebviewData, WebviewOutboundMessage } from "./webview-contract.js";
 
 const DEFAULT_QUOTA_STATE: QuotaState = {
   status: "loading",
   message: "Loading quota from z.ai.",
+};
+
+const LOADING_WEBVIEW_DATA: WebviewData = {
+  dayData: [],
+  dailyCharts: [],
+  projectCharts: [],
+  dailyChartIds: [],
+  dailyChartData: [],
+  projectChartDataSets: {},
+  defaultTab: "daily",
+  modelPricing: {},
+  projectTokenBreakdowns: {},
+  projectModelIds: {},
+  quotaState: { status: "loading", message: "Loading\u2026", summary: null },
+  hero: { todayTokens: 0, totalTokens: 0, totalCost: 0, totalSteps: 0 },
+  projects: [],
+  grandTokens: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheRead: 0 },
+  costEntries: [],
+  providers: [],
+  threeMonthsAgo: 0,
+  hasData: false,
+  hasDays: false,
+  hasProjects: false,
+};
+
+type SettingsCallbacks = {
+  getApiKey: () => Promise<string | undefined>;
+  saveApiKey: (apiKey: string) => Promise<void>;
+  getRefreshIntervalMinutes: () => number;
+  saveRefreshIntervalMinutes: (minutes: number) => Promise<void>;
 };
 
 export class TokenSidebarProvider implements vscode.WebviewViewProvider {
@@ -18,8 +48,19 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   private webviewReady = false;
   private latestWebviewData?: WebviewData;
   private refreshGeneration = 0;
+  private settingsCallbacks?: SettingsCallbacks;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
+
+  public setSettingsCallbacks(callbacks: SettingsCallbacks): void {
+    this.settingsCallbacks = callbacks;
+  }
+
+  public showSettings(): void {
+    if (this.view) {
+      void this.view.webview.postMessage({ type: "showSettings" });
+    }
+  }
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -30,20 +71,56 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "dist")],
     };
     webviewView.webview.onDidReceiveMessage((message: WebviewOutboundMessage | undefined) => {
-      if (message?.type !== "ready") {
+      if (!message || webviewView !== this.view) {
         return;
       }
 
-      if (webviewView !== this.view) {
+      if (message.type === "ready") {
+        this.webviewReady = true;
+        if (this.latestWebviewData) {
+          void webviewView.webview.postMessage({ type: "fullUpdate", data: this.latestWebviewData });
+        }
         return;
       }
 
-      this.webviewReady = true;
-      if (this.latestWebviewData) {
-        void webviewView.webview.postMessage({ type: "fullUpdate", data: this.latestWebviewData });
+      if (message.type === "requestSettings") {
+        void this.handleRequestSettings();
+        return;
+      }
+
+      if (message.type === "saveApiKey") {
+        void this.settingsCallbacks?.saveApiKey(message.apiKey);
+        void this.handleRequestSettings();
+        return;
+      }
+
+      if (message.type === "saveRefreshInterval") {
+        void this.settingsCallbacks?.saveRefreshIntervalMinutes(message.minutes);
+        void this.handleRequestSettings();
+        return;
       }
     });
+
+    webviewView.webview.html = getHtmlFromData({
+      extensionUri: this.extensionUri,
+      webview: webviewView.webview,
+      webviewData: LOADING_WEBVIEW_DATA,
+    });
+    this.initialized = true;
+
     this.refresh();
+  }
+
+  private async handleRequestSettings(): Promise<void> {
+    if (!this.view || !this.settingsCallbacks) {
+      return;
+    }
+    const settings: SettingsData = {
+      hasApiKey: !!(await this.settingsCallbacks.getApiKey()),
+      refreshIntervalMinutes: this.settingsCallbacks.getRefreshIntervalMinutes(),
+      databasePath: DB_PATH,
+    };
+    void this.view.webview.postMessage({ type: "settingsData", data: settings });
   }
 
   public async refresh(quotaState: QuotaState = this.quotaState): Promise<void> {

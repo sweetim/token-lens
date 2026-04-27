@@ -1,4 +1,5 @@
 import { AnchoredTooltip, useAnchoredTooltip } from "./AnchoredTooltip.js";
+import { useIntersectionLazyLoad } from "../hooks/useIntersectionLazyLoad.js";
 
 type DataAttributes = Partial<Record<`data-${string}`, string | number>>;
 
@@ -33,6 +34,7 @@ function ModelCostComparisonList({
   getRowDataAttributes,
 }: ModelCostComparisonListProps) {
   const { tooltip, showTooltip, hideTooltip } = useAnchoredTooltip();
+  const { visibleCount, sentinelRef } = useIntersectionLazyLoad(entries.length);
 
   if (entries.length === 0) {
     return null;
@@ -58,7 +60,7 @@ function ModelCostComparisonList({
           </span>
         ) : null}
       </div>
-      {entries.map((entry) => (
+      {entries.slice(0, visibleCount).map((entry) => (
         <div
           key={entry.modelId}
           class={`model-cost-row${highlightModelIds?.has(entry.modelId.replace(/^[^/]+\//, "")) ? " active" : ""}${isSaved?.(entry.modelId) ? " saved" : ""}`}
@@ -69,6 +71,9 @@ function ModelCostComparisonList({
           <span class="model-cost-value">${entry.cost.toFixed(2)}</span>
         </div>
       ))}
+      {visibleCount < entries.length && (
+        <div ref={sentinelRef} class="vlist-sentinel" />
+      )}
       <AnchoredTooltip tooltip={tooltip} />
     </div>
   );

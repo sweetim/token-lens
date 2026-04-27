@@ -1,5 +1,6 @@
 type DayModelUsage = {
   model: string;
+  openRouterModelId: string;
   totalTokens: number;
 };
 
@@ -164,13 +165,32 @@ type WebviewPersistedState = {
   savedModels: string[];
 };
 
+type SettingsData = {
+  hasApiKey: boolean;
+  refreshIntervalMinutes: number;
+  databasePath: string;
+};
+
 type WebviewInboundMessage = {
   type: "fullUpdate";
   data: WebviewData;
+} | {
+  type: "showSettings";
+} | {
+  type: "settingsData";
+  data: SettingsData;
 };
 
 type WebviewOutboundMessage = {
   type: "ready";
+} | {
+  type: "requestSettings";
+} | {
+  type: "saveApiKey";
+  apiKey: string;
+} | {
+  type: "saveRefreshInterval";
+  minutes: number;
 };
 
 const DEFAULT_COST_FILTER_STATE: CostFilterState = {
@@ -201,6 +221,7 @@ export type {
   ProjectCardData,
   QuotaStateData,
   QuotaSummaryData,
+  SettingsData,
   TokenBar,
   TokenBreakdown,
   WebviewData,
