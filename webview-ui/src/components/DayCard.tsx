@@ -72,17 +72,16 @@ function DayModelUsage({ models }: { models: DayDataItem["models"] }) {
 
 function DayCard({ item, index, expanded, onToggle, modelPricing, getSavedModels }: DayCardProps) {
   const savedModels = getSavedModels();
-  const modelCostIds = savedModels.length > 0
-    ? savedModels
-    : (() => {
-        const ids = new Set<string>();
-        for (const model of item.models) {
-          if (modelPricing[model.openRouterModelId]) {
-            ids.add(model.openRouterModelId);
-          }
-        }
-        return [...ids];
-      })();
+  const usedModelIdsWithPricing = (() => {
+    const ids = new Set<string>();
+    for (const model of item.models) {
+      if (modelPricing[model.openRouterModelId]) {
+        ids.add(model.openRouterModelId);
+      }
+    }
+    return [...ids];
+  })();
+  const modelCostIds = [...new Set([...usedModelIdsWithPricing, ...savedModels])];
 
   const usedModelIds = new Set(item.models.map((model) => model.openRouterModelId.replace(/^[^/]+\//, "")));
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, {
@@ -103,7 +102,7 @@ function DayCard({ item, index, expanded, onToggle, modelPricing, getSavedModels
           <TokenBarRow key={bar.label} bar={bar} />
         ))}
         <DayModelUsage models={item.models} />
-        <ModelCostComparisonList title="Model Cost Comparison" entries={modelCosts} highlightModelIds={usedModelIds} tooltipText="This comparison uses models selected in the Cost tab. If none are selected, it compares only models used in this period" />
+        <ModelCostComparisonList title="Model Cost Comparison" entries={modelCosts} highlightModelIds={usedModelIds} tooltipText="Compares models used in this period. Also includes models selected in the Cost tab" />
       </div>
     </div>
   );
