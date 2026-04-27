@@ -37,16 +37,18 @@ function sumNumericFields(items: NumericFields[]): NumericFields {
   };
 }
 
-function mergeModels(items: { models: { model: string; totalTokens: number }[] }[]): { model: string; totalTokens: number }[] {
-  const totals = new Map<string, number>();
+type MergeableModel = { model: string; openRouterModelId: string; totalTokens: number };
+
+function mergeModels(items: { models: MergeableModel[] }[]): MergeableModel[] {
+  const totals = new Map<string, { model: string; openRouterModelId: string; totalTokens: number }>();
   for (const item of items) {
     for (const model of item.models) {
-      totals.set(model.model, (totals.get(model.model) ?? 0) + model.totalTokens);
+      const existing = totals.get(model.openRouterModelId);
+      if (existing) existing.totalTokens += model.totalTokens;
+      else totals.set(model.openRouterModelId, { model: model.model, openRouterModelId: model.openRouterModelId, totalTokens: model.totalTokens });
     }
   }
-  return [...totals.entries()]
-    .map(([model, totalTokens]) => ({ model, totalTokens }))
-    .sort((a, b) => b.totalTokens - a.totalTokens);
+  return [...totals.values()].sort((a, b) => b.totalTokens - a.totalTokens);
 }
 
 function getPeriodKey(day: string, period: Period): string {

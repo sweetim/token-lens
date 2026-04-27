@@ -164,6 +164,7 @@ async function buildWebviewData(
   projectDays: ProjectDayTokens[],
   modelCosts: ModelCost[],
   quotaState: QuotaState,
+  modelDataOverride?: ModelData,
 ): Promise<WebviewData> {
   const grandTotal = projects.reduce((sum, row) => sum + row.totalTokens, 0);
   const grandCost = projects.reduce((sum, row) => sum + row.totalCost, 0);
@@ -179,7 +180,7 @@ async function buildWebviewData(
   const projectDaysByProject = buildProjectDaysByProject(projectDays);
   const dailyChartConfigs = getDailyChartConfigs();
   const projectChartConfigs = buildProjectChartConfigs(projects);
-  const modelData = await fetchModelData();
+  const modelData = modelDataOverride ?? await fetchModelData();
   const now = Date.now();
 
   const tokenTypes = [

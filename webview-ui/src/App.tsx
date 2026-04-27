@@ -27,11 +27,16 @@ function App({ data, settings, showSettings, onCloseSettings }: AppProps) {
   }
 
   if (!data.hasData) {
+    const isLoading = data.quotaState.status === "loading";
     return (
       <>
         <QuotaSection quotaState={data.quotaState} />
         <HeroSection hero={data.hero} />
-        <p class="empty">No token usage data found.<br />Make sure Kilo is installed and ~/.local/share/kilo/kilo.db exists.</p>
+        <p class="empty">
+          {isLoading
+            ? "Loading token usage\u2026"
+            : <>No token usage data found.<br />Make sure Kilo is installed and ~/.local/share/kilo/kilo.db exists.</>}
+        </p>
       </>
     );
   }

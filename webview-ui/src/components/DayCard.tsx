@@ -84,7 +84,7 @@ function DayCard({ item, index, expanded, onToggle, modelPricing, getSavedModels
         return [...ids];
       })();
 
-  const usedModelIds = new Set(item.models.map((model) => model.model.replace(/:.*$/, "").replace(/^[^/]+\//, "")));
+  const usedModelIds = new Set(item.models.map((model) => model.openRouterModelId.replace(/^[^/]+\//, "")));
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, {
     inputTokens: item.inputTokens,
     outputTokens: item.outputTokens,

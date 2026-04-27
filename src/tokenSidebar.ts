@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
 import { DB_PATH, queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
 import { getHtml, getHtmlFromData } from "./html.js";
+import { fetchModelData } from "./model-data.js";
+import type { ModelData } from "./model-data.js";
 import { buildWebviewData } from "./webview/data.js";
 import type { QuotaState } from "./types.js";
 import type { SettingsData, WebviewData, WebviewOutboundMessage } from "./webview-contract.js";
+
+const EMPTY_MODEL_DATA: ModelData = { createdDates: {}, pricing: {} };
 
 const DEFAULT_QUOTA_STATE: QuotaState = {
   status: "loading",
@@ -123,6 +127,22 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
     void this.view.webview.postMessage({ type: "settingsData", data: settings });
   }
 
+  private sendToWebview(currentView: vscode.WebviewView): void {
+    if (!this.latestWebviewData) {
+      return;
+    }
+    if (!this.initialized) {
+      currentView.webview.html = getHtmlFromData({
+        extensionUri: this.extensionUri,
+        webview: currentView.webview,
+        webviewData: this.latestWebviewData,
+      });
+      this.initialized = true;
+    } else if (this.webviewReady) {
+      void currentView.webview.postMessage({ type: "fullUpdate", data: this.latestWebviewData });
+    }
+  }
+
   public async refresh(quotaState: QuotaState = this.quotaState): Promise<void> {
     this.quotaState = quotaState;
     const currentView = this.view;
@@ -188,24 +208,29 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const nextWebviewData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState);
+      const partialData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, EMPTY_MODEL_DATA);
 
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;
       }
 
-      this.latestWebviewData = nextWebviewData;
+      this.latestWebviewData = partialData;
+      this.sendToWebview(currentView);
 
-      if (!this.initialized) {
-        currentView.webview.html = getHtmlFromData({
-          extensionUri: this.extensionUri,
-          webview: currentView.webview,
-          webviewData: nextWebviewData,
-        });
-        this.initialized = true;
-      } else if (this.webviewReady) {
-        void currentView.webview.postMessage({ type: "fullUpdate", data: nextWebviewData });
+      const modelData = await fetchModelData();
+
+      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+        return;
       }
+
+      const fullData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, modelData);
+
+      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+        return;
+      }
+
+      this.latestWebviewData = fullData;
+      this.sendToWebview(currentView);
     } catch {
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;

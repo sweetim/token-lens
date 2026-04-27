@@ -137,7 +137,7 @@ function ProjectCard({
 }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
   const sortedModels = useMemo(() => [...project.models].sort((left, right) => right.totalTokens - left.totalTokens), [project.models]);
-  const usedModelIds = useMemo(() => new Set(project.models.map((model) => model.model.replace(/:.*$/, "").replace(/^[^/]+\//, ""))), [project.models]);
+  const usedModelIds = useMemo(() => new Set(project.models.map((model) => model.openRouterModelId.replace(/^[^/]+\//, ""))), [project.models]);
   const savedModels = getSavedModels();
   const modelCostIds = savedModels.length > 0 ? savedModels : allProjectModelIds;
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, projectTokenBreakdown);
