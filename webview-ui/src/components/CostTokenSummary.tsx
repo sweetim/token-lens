@@ -6,7 +6,7 @@ function CostTokenSummary({ grandTokens }: { grandTokens: TokenBreakdown }) {
 
   return (
     <div class="cost-token-summary">
-      <div class="cost-token-stat"><span class="cost-token-value">{formatTokensCompact(totalTokens)}</span><span class="cost-token-label">Total Tokens</span></div>
+      <div class="cost-token-stat"><span class="cost-token-value">{formatTokensCompact(totalTokens)}</span><span class="cost-token-label">Total</span></div>
       <div class="cost-token-stat"><span class="cost-token-value">{formatTokensCompact(grandTokens.inputTokens)}</span><span class="cost-token-label">Input</span></div>
       <div class="cost-token-stat"><span class="cost-token-value">{formatTokensCompact(grandTokens.outputTokens)}</span><span class="cost-token-label">Output</span></div>
       <div class="cost-token-stat"><span class="cost-token-value">{formatTokensCompact(grandTokens.reasoningTokens)}</span><span class="cost-token-label">Reasoning</span></div>

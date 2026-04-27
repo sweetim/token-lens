@@ -62,7 +62,7 @@ function ProjectCardHeader({
     <div class="card-header" onClick={onToggle}>
       <div class="card-title-group">
         <span class="card-name">{projectName}</span>
-        <span class="card-total-badge">{formatTokensCompact(totalTokens)} tokens</span>
+        <span class="card-total-badge">{formatTokensCompact(totalTokens)}</span>
       </div>
       <span class="card-cost">${totalCost.toFixed(2)}</span>
     </div>
