@@ -1,11 +1,14 @@
 import { useState, useMemo, useCallback } from "preact/hooks";
-import type { CostEntryData, CostFilterState, TokenBreakdown } from "../../../src/webview-contract.js";
+import { computeModelCostEstimates } from "../../../src/webview-model-cost.js";
+import type { CostEntryData, CostFilterState, ModelPricing, PricingStateData, TokenBreakdown } from "../../../src/webview-contract.js";
 import { CostFiltersPanel } from "./CostFiltersPanel.js";
 import { CostTokenSummary } from "./CostTokenSummary.js";
 import { ModelCostComparisonList } from "./ModelCostComparisonList.js";
 
 type CostTabProps = {
   grandTokens: TokenBreakdown;
+  modelPricing: ModelPricing;
+  pricingState: PricingStateData;
   costEntries: CostEntryData[];
   providers: string[];
   threeMonthsAgo: number;
@@ -17,6 +20,8 @@ type CostTabProps = {
 
 function CostTab({
   grandTokens,
+  modelPricing,
+  pricingState,
   costEntries,
   providers,
   threeMonthsAgo,
@@ -51,8 +56,21 @@ function CostTab({
       return true;
     });
   }, [sortedEntries, activeProviders, ageFilter, threeMonthsAgo]);
+  const estimateByModelId = useMemo(() => new Map(
+    computeModelCostEstimates(costEntries.map((entry) => entry.modelId), modelPricing, grandTokens)
+      .map((entry) => [entry.modelId, entry]),
+  ), [costEntries, modelPricing, grandTokens]);
+  const filteredEntriesWithDetails = useMemo(() => filteredEntries.map((entry) => {
+    const estimate = estimateByModelId.get(entry.modelId);
+    return estimate ? { ...entry, ...estimate } : entry;
+  }), [filteredEntries, estimateByModelId]);
 
   const savedModelsSet = useMemo(() => new Set(savedModelsList), [savedModelsList]);
+  const filtersDisabledMessage = pricingState.status === "loading"
+    ? "Filters available after prices load."
+    : providers.length === 0
+      ? "Filters available when pricing results exist."
+      : undefined;
 
   const toggleSavedModel = useCallback((modelId: string) => {
     setSavedModelsList((previous) => {
@@ -96,10 +114,12 @@ function CostTab({
   }, [ageFilter, saveState]);
 
   return (
-    <div class="cost-tab-inner">
+    <div class="flex flex-col gap-3 px-2.5 pt-2.5 pb-5">
       <CostTokenSummary grandTokens={grandTokens} />
       <CostFiltersPanel
         collapsed={collapsed}
+        disabled={filtersDisabledMessage !== undefined}
+        disabledMessage={filtersDisabledMessage}
         activeProviders={activeProviders}
         providers={providers}
         sortOrder={sortOrder}
@@ -111,7 +131,8 @@ function CostTab({
       />
       <ModelCostComparisonList
         title="Estimated Cost Per Model"
-        entries={filteredEntries}
+        entries={filteredEntriesWithDetails}
+        pricingState={pricingState}
         tooltipText="Click a model to save it for cost comparison in the Projects tab"
         listId="cost-model-list"
         listDataAttributes={{ "data-three-months-ago": threeMonthsAgo }}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "preact/hooks";
 import { formatTokensCompact } from "../view-helpers.js";
-import type { ChartConfig, ChartDayItem, DayDataItem, ModelPricing } from "../../../src/webview-contract.js";
+import type { ChartConfig, ChartDayItem, DayDataItem, ModelPricing, PricingStateData } from "../../../src/webview-contract.js";
 import { DailyCardsView } from "./DailyCardsView.js";
 import { DailyGraphView } from "./DailyGraphView.js";
 import { DailyToolbar } from "./DailyToolbar.js";
@@ -174,10 +174,11 @@ type TimeTabProps = {
   chartData: ChartDayItem[];
   charts: ChartConfig[];
   modelPricing: ModelPricing;
+  pricingState: PricingStateData;
   getSavedModels: () => string[];
 };
 
-function TimeTab({ dayData, chartData, charts, modelPricing, getSavedModels }: TimeTabProps) {
+function TimeTab({ dayData, chartData, charts, modelPricing, pricingState, getSavedModels }: TimeTabProps) {
   const [period, setPeriod] = useState<Period>("daily");
   const [activeView, setActiveView] = useState<"cards" | "graph">("cards");
 
@@ -186,14 +187,14 @@ function TimeTab({ dayData, chartData, charts, modelPricing, getSavedModels }: T
   const periodUnit = getPeriodUnit(period);
 
   return (
-    <div class="daily-layout">
+    <div class="flex h-full min-h-0 flex-col">
       <DailyToolbar period={period} activeView={activeView} onPeriodChange={setPeriod} onViewChange={setActiveView} />
       {activeView === "cards" ? (
-        <div class="daily-view active" id="daily-view-cards">
-          <DailyCardsView dayData={aggregatedDayData} modelPricing={modelPricing} getSavedModels={getSavedModels} />
+        <div class="min-h-0 flex-1" id="daily-view-cards">
+          <DailyCardsView dayData={aggregatedDayData} modelPricing={modelPricing} pricingState={pricingState} getSavedModels={getSavedModels} />
         </div>
       ) : (
-        <div class="daily-view daily-graph-view active" id="daily-view-graph">
+        <div class="min-h-0 flex-1 overflow-y-auto px-2.5 pt-2.5 pb-5" id="daily-view-graph">
           <DailyGraphView chartData={aggregatedChartData} charts={charts} periodUnit={periodUnit} />
         </div>
       )}

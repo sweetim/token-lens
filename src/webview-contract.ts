@@ -101,6 +101,13 @@ type QuotaStateData = {
   summary: QuotaSummaryData | null;
 };
 
+type PricingStatus = "loading" | "ready" | "cached" | "unavailable";
+
+type PricingStateData = {
+  status: PricingStatus;
+  message: string;
+};
+
 type HeroStatsData = {
   todayTokens: number;
   totalTokens: number;
@@ -142,6 +149,7 @@ type WebviewData = {
   projectTokenBreakdowns: Record<string, TokenBreakdown>;
   projectModelIds: Record<string, string[]>;
   quotaState: QuotaStateData;
+  pricingState: PricingStateData;
   hero: HeroStatsData;
   projects: ProjectCardData[];
   grandTokens: TokenBreakdown;
@@ -218,6 +226,8 @@ export type {
   HeroStatsData,
   ModelPricing,
   ModelPricingEntry,
+  PricingStateData,
+  PricingStatus,
   ProjectCardData,
   QuotaStateData,
   QuotaSummaryData,

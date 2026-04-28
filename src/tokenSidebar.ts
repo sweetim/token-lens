@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { DB_PATH, queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
 import { getHtml, getHtmlFromData } from "./html.js";
-import { fetchModelData } from "./model-data.js";
+import { fetchModelDataWithStatus } from "./model-data.js";
 import type { ModelData } from "./model-data.js";
 import { buildWebviewData } from "./webview/data.js";
 import type { QuotaState } from "./types.js";
@@ -23,6 +23,7 @@ const LOADING_WEBVIEW_DATA: WebviewData = {
   projectChartDataSets: {},
   defaultTab: "daily",
   modelPricing: {},
+  pricingState: { status: "loading", message: "Loading OpenRouter model prices..." },
   projectTokenBreakdowns: {},
   projectModelIds: {},
   quotaState: { status: "loading", message: "Loading\u2026", summary: null },
@@ -208,7 +209,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const partialData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, EMPTY_MODEL_DATA);
+      const partialData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, EMPTY_MODEL_DATA, "loading");
 
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;
@@ -217,13 +218,13 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       this.latestWebviewData = partialData;
       this.sendToWebview(currentView);
 
-      const modelData = await fetchModelData();
+      const modelData = await fetchModelDataWithStatus();
 
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;
       }
 
-      const fullData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, modelData);
+      const fullData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, modelData.data, modelData.status);
 
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;

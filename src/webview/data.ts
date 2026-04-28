@@ -1,10 +1,10 @@
 import dayjs from "dayjs";
 import { SEG_COLORS } from "../bars.js";
 import { formatDay, formatDurationMs, formatTokens } from "../format.js";
-import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelData, toOpenRouterModelId } from "../model-data.js";
+import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelDataWithStatus, toOpenRouterModelId } from "../model-data.js";
 import type { ModelData } from "../model-data.js";
 import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "../types.js";
-import type { ChartConfig, ChartDayItem, CostEntryData, ProjectCardData, QuotaStateData, TokenBreakdown, WebviewData } from "../webview-contract.js";
+import type { ChartConfig, ChartDayItem, CostEntryData, PricingStateData, PricingStatus, ProjectCardData, QuotaStateData, TokenBreakdown, WebviewData } from "../webview-contract.js";
 
 function getDailyChartConfigs(): ChartConfig[] {
   return [
@@ -126,6 +126,19 @@ function buildQuotaStateData(quotaState: QuotaState): QuotaStateData {
   };
 }
 
+function buildPricingStateData(status: PricingStatus): PricingStateData {
+  if (status === "loading") {
+    return { status, message: "Loading OpenRouter model prices..." };
+  }
+  if (status === "cached") {
+    return { status, message: "Using cached OpenRouter model prices." };
+  }
+  if (status === "unavailable") {
+    return { status, message: "OpenRouter prices could not be loaded. Token usage is still available." };
+  }
+  return { status, message: "OpenRouter model prices updated." };
+}
+
 function buildProjectCardsData(projects: ProjectTokens[]): ProjectCardData[] {
   return projects.map((project) => ({
     project: project.project,
@@ -165,6 +178,7 @@ async function buildWebviewData(
   modelCosts: ModelCost[],
   quotaState: QuotaState,
   modelDataOverride?: ModelData,
+  pricingStatusOverride?: PricingStatus,
 ): Promise<WebviewData> {
   const grandTotal = projects.reduce((sum, row) => sum + row.totalTokens, 0);
   const grandCost = projects.reduce((sum, row) => sum + row.totalCost, 0);
@@ -180,7 +194,11 @@ async function buildWebviewData(
   const projectDaysByProject = buildProjectDaysByProject(projectDays);
   const dailyChartConfigs = getDailyChartConfigs();
   const projectChartConfigs = buildProjectChartConfigs(projects);
-  const modelData = modelDataOverride ?? await fetchModelData();
+  const modelDataResult = modelDataOverride
+    ? { data: modelDataOverride, status: pricingStatusOverride ?? "ready" }
+    : await fetchModelDataWithStatus();
+  const modelData = modelDataResult.data;
+  const pricingState = buildPricingStateData(pricingStatusOverride ?? modelDataResult.status);
   const now = Date.now();
 
   const tokenTypes = [
@@ -236,6 +254,7 @@ async function buildWebviewData(
     ])),
     projectModelIds: buildProjectModelIds(projects, modelCosts, modelData),
     quotaState: buildQuotaStateData(quotaState),
+    pricingState,
     hero: {
       todayTokens: todayTotalTokens,
       totalTokens: grandTotal,
@@ -253,4 +272,4 @@ async function buildWebviewData(
   };
 }
 
-export { buildWebviewData };
+export { buildWebviewData, buildPricingStateData };

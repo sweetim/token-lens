@@ -1,7 +1,8 @@
-import { render } from "preact";
+import { render, type ComponentChildren } from "preact";
 import { useState, useEffect, useCallback } from "preact/hooks";
 import { App } from "./App.js";
 import { postWebviewMessage, readWebviewData } from "./bootstrap.js";
+import "./tailwind.css";
 import type { WebviewData, WebviewInboundMessage, SettingsData } from "../../src/webview-contract.js";
 
 const DEFAULT_SETTINGS: SettingsData = {
@@ -9,6 +10,16 @@ const DEFAULT_SETTINGS: SettingsData = {
   refreshIntervalMinutes: 5,
   databasePath: "",
 };
+
+const THEME_VARIABLES = "--fg: var(--vscode-foreground); --bg: var(--vscode-sideBar-background); --muted: var(--vscode-descriptionForeground); --accent: var(--vscode-charts-blue, #3794ff); --accent2: var(--vscode-charts-purple, #b180d7); --green: var(--vscode-charts-green, #89d185); --orange: var(--vscode-charts-orange, #d18616); --card-bg: var(--vscode-editor-background); --border: var(--vscode-widget-border, rgba(128,128,128,.25)); font-family: var(--vscode-font-family, -apple-system, sans-serif); font-size: var(--vscode-font-size, 13px);";
+
+function WebviewFrame({ children }: { children: ComponentChildren }) {
+  return (
+    <div class="fixed inset-0 flex flex-col overflow-hidden bg-(--bg) text-(--fg)" style={THEME_VARIABLES}>
+      {children}
+    </div>
+  );
+}
 
 function Root() {
   const [data, setData] = useState<WebviewData>(readWebviewData);
@@ -39,10 +50,10 @@ function Root() {
   }, []);
 
   if (showSettings) {
-    return <App data={data} settings={settings} showSettings={showSettings} onCloseSettings={handleCloseSettings} />;
+    return <WebviewFrame><App data={data} settings={settings} showSettings={showSettings} onCloseSettings={handleCloseSettings} /></WebviewFrame>;
   }
 
-  return <App data={data} />;
+  return <WebviewFrame><App data={data} /></WebviewFrame>;
 }
 
 render(<Root />, document.getElementById("root")!);

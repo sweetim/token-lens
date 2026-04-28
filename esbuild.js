@@ -1,4 +1,5 @@
 const esbuild = require("esbuild");
+const { tailwindPlugin } = require("esbuild-plugin-tailwindcss");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -50,7 +51,7 @@ async function main() {
 		logLevel: 'silent',
 		jsx: 'automatic',
 		jsxImportSource: 'preact',
-		plugins: [esbuildProblemMatcherPlugin],
+		plugins: [tailwindPlugin(), esbuildProblemMatcherPlugin],
 	});
 
 	if (watch) {

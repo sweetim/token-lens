@@ -5,7 +5,9 @@
 	"tasks": [
 		{
             "label": "watch",
+            "dependsOrder": "sequence",
             "dependsOn": [
+                "build:esbuild",
                 "npm: watch:tsc",
                 "npm: watch:esbuild"
             ],
@@ -15,6 +17,17 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
+            }
+        },
+        {
+            "label": "build:esbuild",
+            "type": "shell",
+            "command": "bun esbuild.js",
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "group": "watch",
+                "reveal": "never"
             }
         },
         {

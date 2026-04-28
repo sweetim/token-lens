@@ -19,18 +19,18 @@ function DailyGraphStats({ chartData, periodUnit }: { chartData: ChartDayItem[];
   const average = chartData.length > 0 ? Math.round(chartData.reduce((sum, day) => sum + day.totalTokens, 0) / chartData.length) : 0;
 
   return (
-    <div class="daily-graph-stats">
-      <div class="daily-graph-stat">
-        <span class="daily-graph-stat-value">{formatTokensCompact(latest?.totalTokens ?? 0)}</span>
-        <span class="daily-graph-stat-label">Latest {periodUnit}</span>
+    <div class="mb-3 grid grid-cols-3 gap-2">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-sm font-bold tabular-nums">{formatTokensCompact(latest?.totalTokens ?? 0)}</span>
+        <span class="text-[9px] uppercase tracking-[.5px] text-(--muted)">Latest {periodUnit}</span>
       </div>
-      <div class="daily-graph-stat">
-        <span class="daily-graph-stat-value">{formatTokensCompact(average)}</span>
-        <span class="daily-graph-stat-label">Average / {periodUnit}</span>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-sm font-bold tabular-nums">{formatTokensCompact(average)}</span>
+        <span class="text-[9px] uppercase tracking-[.5px] text-(--muted)">Average / {periodUnit}</span>
       </div>
-      <div class="daily-graph-stat">
-        <span class="daily-graph-stat-value">{formatTokensCompact(peak?.totalTokens ?? 0)}</span>
-        <span class="daily-graph-stat-label">Peak ({peak?.dayLabel ?? ""})</span>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-sm font-bold tabular-nums">{formatTokensCompact(peak?.totalTokens ?? 0)}</span>
+        <span class="text-[9px] uppercase tracking-[.5px] text-(--muted)">Peak ({peak?.dayLabel ?? ""})</span>
       </div>
     </div>
   );
@@ -38,12 +38,12 @@ function DailyGraphStats({ chartData, periodUnit }: { chartData: ChartDayItem[];
 
 function DailyGraphView({ chartData, charts, periodUnit }: DailyGraphViewProps) {
   return (
-    <div class="daily-graph-panel">
+    <div class="rounded-md border border-(--border) bg-(--card-bg) p-3">
       <DailyGraphStats chartData={chartData} periodUnit={periodUnit} />
-      {charts.map((chart) => (
-        <LineChart key={chart.id} config={chart} days={chartData} />
+      {charts.map((chart, index) => (
+        <LineChart key={chart.id} config={chart} days={chartData} separated={index > 0} />
       ))}
-      <PieChart days={chartData} periodUnit={periodUnit} />
+      <PieChart days={chartData} periodUnit={periodUnit} separated={charts.length > 0} />
     </div>
   );
 }

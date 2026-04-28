@@ -61,6 +61,16 @@ function formatDuration(timestamp: number): string {
   return `${minutes}m`;
 }
 
+function formatDurationCompact(timestamp: number): string {
+  const diff = timestamp - Date.now();
+  if (diff <= 0) return "now";
+  const hours = Math.floor(diff / 3600000);
+  if (hours > 0) return `${hours}h`;
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  if (minutes > 0) return `${minutes}m`;
+  return "1m";
+}
+
 function formatDelay(delayMs: number): string {
   if (delayMs < 60000) {
     return `${Math.max(1, Math.round(delayMs / 1000))}s`;
@@ -258,7 +268,7 @@ async function persistQuotaSummary(nextQuotaSummary: QuotaSummary | undefined): 
 
 function applyStatusBarState(nextQuotaState: QuotaState): void {
   if (nextQuotaState.summary) {
-    statusBarItem.text = `$(zap) ${nextQuotaState.summary.usedPercentage.toFixed(0)}%`;
+    statusBarItem.text = `$(zap) ${nextQuotaState.summary.usedPercentage.toFixed(0)}%  $(timeline-view-icon) ${formatDurationCompact(nextQuotaState.summary.nextResetTime)}`;
     statusBarItem.backgroundColor = getStatusBackgroundColor(nextQuotaState.summary.usedPercentage);
   } else if (nextQuotaState.status === "loading") {
     statusBarItem.text = "$(loading~spin) Usage ...";
@@ -423,14 +433,14 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
       const lastQuotaSummary = getLastSuccessfulQuotaSummary();
       await setQuotaState(lastQuotaSummary
         ? {
-            status: "rateLimited",
-            message: `${retryMessage} Showing the last successful snapshot from ${formatAge(lastQuotaSummary.fetchedAt)}.`,
-            summary: lastQuotaSummary,
-          }
+          status: "rateLimited",
+          message: `${retryMessage} Showing the last successful snapshot from ${formatAge(lastQuotaSummary.fetchedAt)}.`,
+          summary: lastQuotaSummary,
+        }
         : {
-            status: "rateLimited",
-            message: retryMessage,
-          });
+          status: "rateLimited",
+          message: retryMessage,
+        });
       scheduleRefresh(retryDelayMs);
       return;
     }
@@ -440,14 +450,14 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
     const lastQuotaSummary = getLastSuccessfulQuotaSummary();
     await setQuotaState(lastQuotaSummary
       ? {
-          status: "stale",
-          message: `${result.message} Showing the last successful snapshot from ${formatAge(lastQuotaSummary.fetchedAt)}. Retrying in ${formatDelay(retryDelayMs)}.`,
-          summary: lastQuotaSummary,
-        }
+        status: "stale",
+        message: `${result.message} Showing the last successful snapshot from ${formatAge(lastQuotaSummary.fetchedAt)}. Retrying in ${formatDelay(retryDelayMs)}.`,
+        summary: lastQuotaSummary,
+      }
       : {
-          status: "unavailable",
-          message: `${result.message} Retrying in ${formatDelay(retryDelayMs)}.`,
-        });
+        status: "unavailable",
+        message: `${result.message} Retrying in ${formatDelay(retryDelayMs)}.`,
+      });
     scheduleRefresh(retryDelayMs);
   })();
 
@@ -534,4 +544,4 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }

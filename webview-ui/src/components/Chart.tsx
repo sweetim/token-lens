@@ -12,6 +12,9 @@ const CHART_PADDING_BOTTOM = 34;
 const CHART_PADDING_LEFT = 44;
 const CHART_DRAWABLE_WIDTH = CHART_WIDTH - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
 const CHART_DRAWABLE_HEIGHT = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
+const CHART_SECTION_CLASS = "flex flex-col gap-2.5";
+const SEPARATED_CHART_SECTION_CLASS = "mt-[22px] border-t border-(--border) pt-[22px]";
+const CHART_LABEL_CLASS = "fill-(--muted) text-[10px] [font-family:var(--vscode-font-family,-apple-system,sans-serif)]";
 
 type TooltipState = {
   clientX: number;
@@ -51,20 +54,20 @@ function ChartLegend({
   interactive?: boolean;
 }) {
   return (
-    <div class="daily-chart-legend">
+    <div class="flex flex-wrap justify-end gap-x-2.5 gap-y-1.5">
       {series.map((seriesItem) => {
         const isHidden = interactive && hiddenSeries.has(seriesItem.key);
         return (
           <button
             key={seriesItem.key}
-            class={`daily-chart-legend-item${isHidden ? " is-hidden" : ""}${series.length === 1 ? " is-static" : ""}`}
+            class={`inline-flex cursor-pointer items-center gap-[5px] rounded-full border border-transparent bg-transparent px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[.3px] text-(--muted) transition-colors hover:border-(--border) hover:text-(--fg) disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent disabled:hover:text-(--muted)${isHidden ? " opacity-50" : ""}${series.length === 1 ? " cursor-default hover:border-transparent hover:bg-transparent hover:text-(--muted)" : ""}`}
             type="button"
             aria-pressed={!isHidden}
             disabled={series.length === 1}
             onClick={interactive ? () => onToggleSeries(seriesItem.key) : undefined}
           >
-            <span class="daily-chart-legend-swatch" style={{ background: seriesItem.color }} />
-            <span class="daily-chart-legend-label">{seriesItem.label}</span>
+            <span class="h-2 w-2 shrink-0 rounded-full" style={{ background: seriesItem.color }} />
+            <span class={isHidden ? "line-through" : ""}>{seriesItem.label}</span>
           </button>
         );
       })}
@@ -88,8 +91,8 @@ function ChartHeader({
   interactive?: boolean;
 }) {
   return (
-    <div class="daily-chart-header">
-      {hideTitle ? null : <div class="daily-chart-title">{title}</div>}
+    <div class="flex items-start justify-between gap-2">
+      {hideTitle ? null : <div class="text-[10px] font-bold uppercase tracking-[.5px] text-(--muted)">{title}</div>}
       <ChartLegend series={series} hiddenSeries={hiddenSeries} onToggleSeries={onToggleSeries} interactive={interactive} />
     </div>
   );
@@ -109,13 +112,13 @@ function ChartTooltip({
   }
 
   return (
-    <div class="daily-chart-tooltip" style={{ left: tooltip.left, top: tooltip.top }}>
-      <div class="daily-chart-tooltip-day">{tooltipDay.dayLabel}</div>
-      <div class="daily-chart-tooltip-grid">
+    <div class="pointer-events-none absolute left-0 top-0 z-[2] min-w-[180px] max-w-[min(280px,calc(100%_-_12px))] rounded-md border border-(--border) bg-(--card-bg) px-2.5 py-[9px] shadow-[0_10px_28px_rgba(0,0,0,.2)]" style={{ left: tooltip.left, top: tooltip.top }}>
+      <div class="mb-[7px] text-[11px] font-bold">{tooltipDay.dayLabel}</div>
+      <div class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
         {tooltipRows.map((row) => (
           <Fragment key={row[0]}>
-            <div class="daily-chart-tooltip-label">{row[0]}</div>
-            <div class="daily-chart-tooltip-value">{row[1]}</div>
+            <div class="text-[10px] uppercase tracking-[.3px] text-(--muted)">{row[0]}</div>
+            <div class="text-right text-[11px] font-semibold tabular-nums">{row[1]}</div>
           </Fragment>
         ))}
       </div>
@@ -147,14 +150,14 @@ function LineChartPlot({
     : null;
 
   return (
-    <svg class="daily-chart" viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label={`${config.title} chart`}>
+    <svg class="block h-auto w-full overflow-visible" viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label={`${config.title} chart`}>
       {defs}
       {guideValues.map((value) => {
         const y = CHART_PADDING_TOP + CHART_DRAWABLE_HEIGHT - (value / maxValue) * CHART_DRAWABLE_HEIGHT;
         return (
           <g key={value}>
-            <line class="daily-chart-guide" x1={CHART_PADDING_LEFT} y1={y} x2={CHART_WIDTH - CHART_PADDING_RIGHT} y2={y} />
-            <text class="daily-chart-guide-label" x={CHART_PADDING_LEFT - 8} y={y + 3} text-anchor="end">{formatChartValue(config.valueFormat, value)}</text>
+            <line class="stroke-(--border) stroke-1" x1={CHART_PADDING_LEFT} y1={y} x2={CHART_WIDTH - CHART_PADDING_RIGHT} y2={y} />
+            <text class={CHART_LABEL_CLASS} x={CHART_PADDING_LEFT - 8} y={y + 3} text-anchor="end">{formatChartValue(config.valueFormat, value)}</text>
           </g>
         );
       })}
@@ -175,12 +178,12 @@ function LineChartPlot({
 
         return (
           <g key={series.key}>
-            {areaPath ? <path class="daily-chart-area" style={{ fill: `url(#${config.id}-fill)` }} d={areaPath} /> : null}
-            <path class="daily-chart-line" style={{ stroke: series.color }} d={linePath} />
+            {areaPath ? <path style={{ fill: `url(#${config.id}-fill)` }} d={areaPath} /> : null}
+            <path class="fill-none [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:2.5]" style={{ stroke: series.color }} d={linePath} />
             {points.map((point) => (
               <circle
                 key={point.dayIndex}
-                class="daily-chart-point"
+                class="cursor-crosshair fill-(--card-bg) [stroke-width:2] transition-[fill,transform] hover:fill-(--fg)"
                 data-day-index={point.dayIndex}
                 cx={point.x.toFixed(2)}
                 cy={point.y.toFixed(2)}
@@ -196,7 +199,7 @@ function LineChartPlot({
       })}
       {labelIndexes.map((index) => {
         const day = reversed[index];
-        return <text key={index} class="daily-chart-axis-label" x={axisPoints[index].x.toFixed(2)} y={CHART_HEIGHT - 10} text-anchor="middle">{day.dayLabel}</text>;
+        return <text key={index} class={CHART_LABEL_CLASS} x={axisPoints[index].x.toFixed(2)} y={CHART_HEIGHT - 10} text-anchor="middle">{day.dayLabel}</text>;
       })}
     </svg>
   );
@@ -204,15 +207,15 @@ function LineChartPlot({
 
 function PieLegend({ entries, total }: { entries: ChartDayItem["models"]; total: number }) {
   return (
-    <div class="pie-legend">
+    <div class="flex flex-wrap justify-center gap-x-3 gap-y-1">
       {entries.map((entry, index) => {
         const percentage = (entry.totalTokens / total) * 100;
         const color = MODEL_COLORS[index % MODEL_COLORS.length];
         return (
-          <div key={entry.model} class="pie-legend-item">
-            <span class="pie-legend-swatch" style={{ background: color }} />
-            <span class="pie-legend-label">{entry.model}</span>
-            <span class="pie-legend-value">{percentage.toFixed(1)}%</span>
+          <div key={entry.model} class="inline-flex items-center gap-1 text-[10px]">
+            <span class="h-2 w-2 shrink-0 rounded-sm" style={{ background: color }} />
+            <span class="text-(--fg)">{entry.model}</span>
+            <span class="text-(--muted) tabular-nums">{percentage.toFixed(1)}%</span>
           </div>
         );
       })}
@@ -220,7 +223,7 @@ function PieLegend({ entries, total }: { entries: ChartDayItem["models"]; total:
   );
 }
 
-function LineChart({ config, days }: { config: ChartConfig; days: ChartDayItem[] }) {
+function LineChart({ config, days, separated = false }: { config: ChartConfig; days: ChartDayItem[]; separated?: boolean }) {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -259,10 +262,10 @@ function LineChart({ config, days }: { config: ChartConfig; days: ChartDayItem[]
 
   if (reversed.length === 0) {
     return (
-      <section class="daily-chart-section" data-chart-id={config.id}>
+      <section class={`${CHART_SECTION_CLASS}${separated ? ` ${SEPARATED_CHART_SECTION_CLASS}` : ""}`} data-chart-id={config.id}>
         <ChartHeader title={config.title} hideTitle={config.hideTitle} series={config.series} hiddenSeries={new Set()} onToggleSeries={() => undefined} interactive={false} />
-        <div class="daily-chart-wrap">
-          <svg class="daily-chart" data-chart-svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} />
+        <div class="relative w-full">
+          <svg class="block h-auto w-full overflow-visible" data-chart-svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} />
         </div>
       </section>
     );
@@ -297,9 +300,9 @@ function LineChart({ config, days }: { config: ChartConfig; days: ChartDayItem[]
   const tooltipPosition = tooltip ? positionTooltip(tooltip) : null;
 
   return (
-    <section class="daily-chart-section" data-chart-id={config.id}>
+    <section class={`${CHART_SECTION_CLASS}${separated ? ` ${SEPARATED_CHART_SECTION_CLASS}` : ""}`} data-chart-id={config.id}>
       <ChartHeader title={config.title} hideTitle={config.hideTitle} series={config.series} hiddenSeries={hiddenSeries} onToggleSeries={toggleSeries} />
-      <div class="daily-chart-wrap" ref={wrapRef}>
+      <div class="relative w-full" ref={wrapRef}>
         <LineChartPlot
           config={config}
           reversed={reversed}
@@ -316,7 +319,7 @@ function LineChart({ config, days }: { config: ChartConfig; days: ChartDayItem[]
   );
 }
 
-function PieChart({ days, periodUnit }: { days: ChartDayItem[]; periodUnit: string }) {
+function PieChart({ days, periodUnit, separated = false }: { days: ChartDayItem[]; periodUnit: string; separated?: boolean }) {
   const latest = days.reduce<ChartDayItem | null>((best, day) => (!best || day.day > best.day) ? day : best, null);
   if (!latest) return null;
 
@@ -330,12 +333,12 @@ function PieChart({ days, periodUnit }: { days: ChartDayItem[]; periodUnit: stri
   let startAngle = -Math.PI / 2;
 
   return (
-    <section class="daily-chart-section" data-chart-id="daily-model-pie">
-      <div class="daily-chart-header">
-        <div class="daily-chart-title">{`LLM Usage (Latest ${periodUnit})`}</div>
+    <section class={`${CHART_SECTION_CLASS}${separated ? ` ${SEPARATED_CHART_SECTION_CLASS}` : ""}`} data-chart-id="daily-model-pie">
+      <div class="flex items-start justify-between gap-2">
+        <div class="text-[10px] font-bold uppercase tracking-[.5px] text-(--muted)">{`LLM Usage (Latest ${periodUnit})`}</div>
       </div>
-      <div class="pie-chart-wrap">
-        <svg class="pie-chart" viewBox="0 0 200 200" role="img" aria-label={`LLM usage distribution for latest ${periodUnit.toLowerCase()}`}>
+      <div class="flex flex-col items-center gap-3">
+        <svg class="h-[180px] w-[180px]" viewBox="0 0 200 200" role="img" aria-label={`LLM usage distribution for latest ${periodUnit.toLowerCase()}`}>
           {pieData.map((entry, index) => {
             const percentage = entry.totalTokens / total;
             const angle = percentage * 2 * Math.PI;
@@ -355,7 +358,7 @@ function PieChart({ days, periodUnit }: { days: ChartDayItem[]; periodUnit: stri
               const y1 = centerY + radius * Math.sin(startAngle);
               const pathData = `M ${centerX} ${centerY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 1 1 ${mx.toFixed(2)} ${my.toFixed(2)} A ${radius} ${radius} 0 1 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
               startAngle = endAngle;
-              return <path key={entry.model} class="pie-slice" d={pathData} fill={color} />;
+              return <path key={entry.model} class="stroke-(--card-bg) stroke-1 transition-opacity hover:opacity-80" d={pathData} fill={color} />;
             }
 
             const x1 = centerX + radius * Math.cos(startAngle);
@@ -366,7 +369,7 @@ function PieChart({ days, periodUnit }: { days: ChartDayItem[]; periodUnit: stri
             const pathData = `M ${centerX} ${centerY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
             startAngle = endAngle;
 
-            return <path key={entry.model} class="pie-slice" d={pathData} fill={color} />;
+            return <path key={entry.model} class="stroke-(--card-bg) stroke-1 transition-opacity hover:opacity-80" d={pathData} fill={color} />;
           })}
         </svg>
         <PieLegend entries={pieData} total={total} />

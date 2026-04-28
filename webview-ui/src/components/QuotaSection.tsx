@@ -1,7 +1,7 @@
 import type { QuotaStateData } from "../../../src/webview-contract.js";
 
 const Z_AI_LOGO_SVG = (
-  <svg class="quota-brand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <svg class="h-3 w-3 shrink-0 text-(--fg)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <rect x="2" y="2" width="20" height="20" rx="3" fill="currentColor" />
     <path d="M12.5 5.5L11.4 7.1c-.15.22-.41.36-.7.36H5.5V5.5h7z" fill="#fff" />
     <path d="M18.5 5.5L9.7 18.5H5.5L14.3 5.5h4.2z" fill="#fff" />
@@ -52,23 +52,23 @@ function QuotaSection({ quotaState }: { quotaState: QuotaStateData }) {
     : "width:0%;background:var(--border)";
 
   return (
-    <div class="quota-hero">
-      <div class="quota-header">
-        <div class="quota-brand">
+    <div class="border-b border-(--border) bg-(--card-bg) px-3.5 pt-4 pb-3.5">
+      <div class="flex items-center justify-between gap-3">
+        <div class="inline-flex min-w-0 items-center gap-2">
           {Z_AI_LOGO_SVG}
-          <span class="quota-title">Quota Usage</span>
+          <span class="text-[11px] font-bold uppercase tracking-[.7px] text-(--fg)">Quota Usage</span>
         </div>
-        <span class="quota-reset-badge">reset <span class="quota-reset-duration">{resetDurationLabel}</span></span>
+        <span class="shrink-0 whitespace-nowrap rounded-full bg-(--border) px-2 py-0.5 text-[11px] font-bold text-(--muted)">reset <span class="font-bold text-white">{resetDurationLabel}</span></span>
       </div>
-      <div class="quota-progress-section">
-        <div class="quota-progress-header">
-          <span class="quota-progress-label">Usage</span>
-          <span class="quota-progress-value">{usageValueLabel}</span>
+      <div class="mt-3.5 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-[.5px]">Usage</span>
+          <span class="text-[10px] font-bold uppercase tracking-[.5px]">{usageValueLabel}</span>
         </div>
-        <div class="quota-progress-track">
-          <div class="quota-progress-fill" style={progressStyle} />
+        <div class="h-2 overflow-hidden rounded-full bg-(--border)">
+          <div class="h-full rounded-full" style={progressStyle} />
         </div>
-        {quotaState.message ? <div class="quota-status-message">{quotaState.message}</div> : null}
+        {quotaState.message ? <div class="text-[11px] leading-[1.4] text-(--muted)">{quotaState.message}</div> : null}
       </div>
     </div>
   );

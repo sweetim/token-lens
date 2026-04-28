@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { WEBVIEW_DATA_ELEMENT_ID } from "../webview-contract.js";
 import type { WebviewData } from "../webview-contract.js";
 
-const STYLES = fs.readFileSync(path.join(__dirname, "webview-styles.css"), "utf8");
+const STYLES = fs.readFileSync(path.join(__dirname, "webview-client.css"), "utf8");
 
 type WebviewDocumentParams = {
   extensionUri: vscode.Uri;

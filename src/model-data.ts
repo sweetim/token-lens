@@ -19,6 +19,13 @@ type ModelData = {
   pricing: Record<string, { prompt: number; completion: number; cacheRead: number }>;
 };
 
+type ModelDataFetchStatus = "ready" | "cached" | "unavailable";
+
+type ModelDataFetchResult = {
+  data: ModelData;
+  status: ModelDataFetchStatus;
+};
+
 type OpenRouterModel = {
   id: string;
   created: number;
@@ -28,6 +35,13 @@ type OpenRouterModel = {
 let cachedData: ModelData | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000;
+const EMPTY_MODEL_DATA: ModelData = { createdDates: {}, pricing: {} };
+
+function getFallbackModelData(): ModelDataFetchResult {
+  return cachedData
+    ? { data: cachedData, status: "cached" }
+    : { data: EMPTY_MODEL_DATA, status: "unavailable" };
+}
 
 function toOpenRouterModelId(provider: string, model: string): string {
   if (model.includes("/")) {
@@ -37,16 +51,16 @@ function toOpenRouterModelId(provider: string, model: string): string {
   return prefix ? `${prefix}/${model}` : `${provider}/${model}`;
 }
 
-async function fetchModelData(): Promise<ModelData> {
+async function fetchModelDataWithStatus(): Promise<ModelDataFetchResult> {
   const now = dayjs().valueOf();
   if (cachedData && (now - cacheTimestamp) < CACHE_TTL_MS) {
-    return cachedData;
+    return { data: cachedData, status: "ready" };
   }
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/models");
     if (!response.ok) {
-      return cachedData ?? { createdDates: {}, pricing: {} };
+      return getFallbackModelData();
     }
     const body = await response.json() as { data: OpenRouterModel[] };
     const models = body.data;
@@ -72,11 +86,16 @@ async function fetchModelData(): Promise<ModelData> {
 
     cachedData = { createdDates, pricing };
     cacheTimestamp = now;
-    return cachedData;
+    return { data: cachedData, status: "ready" };
   } catch {
-    return cachedData ?? { createdDates: {}, pricing: {} };
+    return getFallbackModelData();
   }
 }
 
-export { THREE_MONTHS_MS, ALLOWED_PROVIDERS, PROVIDER_ID_MAP, toOpenRouterModelId, fetchModelData };
-export type { ModelData };
+async function fetchModelData(): Promise<ModelData> {
+  const result = await fetchModelDataWithStatus();
+  return result.data;
+}
+
+export { THREE_MONTHS_MS, ALLOWED_PROVIDERS, PROVIDER_ID_MAP, toOpenRouterModelId, fetchModelData, fetchModelDataWithStatus };
+export type { ModelData, ModelDataFetchResult, ModelDataFetchStatus };
