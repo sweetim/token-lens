@@ -23,9 +23,12 @@
 - **Sidebar analytics** — daily and per-project token breakdown with visual progress bars
 - **Per-project & per-day model breakdown** — see which models were used and how much each cost
 - **LLM cost comparison** — compare what your token usage would cost across models using live OpenRouter pricing, with provider filtering, sort direction, and age filters
-- **Quota tracking** — monitors your z.ai quota with resilient fetching (exponential backoff, rate-limit handling, stale snapshot fallback)
+- **Quota tracking** — monitors your z.ai quota
 - **Configurable auto-refresh** — data updates automatically (default 5 minutes, customizable in settings)
-- **Multi-provider support** — OpenAI, DeepSeek, MoonshotAI, Anthropic, z.ai, Qwen, MiniMax
+
+## Supported Providers
+
+- [z.ai](https://z.ai)
 
 ## Commands
 
