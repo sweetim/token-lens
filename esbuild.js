@@ -36,6 +36,7 @@ async function main() {
 		outfile: 'dist/extension.js',
 		external: ['vscode'],
 		logLevel: 'silent',
+		alias: { '@': './src', '@shared': './src' },
 		plugins: [esbuildProblemMatcherPlugin],
 	});
 
@@ -51,6 +52,7 @@ async function main() {
 		logLevel: 'silent',
 		jsx: 'automatic',
 		jsxImportSource: 'preact',
+		alias: { '@': './webview-ui/src', '@shared': './src' },
 		plugins: [tailwindPlugin(), esbuildProblemMatcherPlugin],
 	});
 

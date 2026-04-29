@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { DB_PATH, queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "./db.js";
-import { getHtml, getHtmlFromData } from "./html.js";
-import { fetchModelDataWithStatus } from "./model-data.js";
-import type { ModelData } from "./model-data.js";
-import { buildWebviewData } from "./webview/data.js";
-import type { QuotaState } from "./types.js";
-import type { SettingsData, WebviewData, WebviewOutboundMessage } from "./webview-contract.js";
+import { DB_PATH, queryProjectTokens, queryDayTokens, queryProjectDayTokens, queryModelCosts, queryProjectModels, queryDayModels } from "@/db";
+import { getHtml, getHtmlFromData } from "@/html";
+import { fetchModelDataWithStatus } from "@/model-data";
+import type { ModelData } from "@/model-data";
+import { buildWebviewData } from "@/webview/data";
+import type { QuotaState } from "@/types";
+import type { SettingsData, WebviewData, WebviewOutboundMessage } from "@/webview-contract";
 
 const EMPTY_MODEL_DATA: ModelData = { createdDates: {}, pricing: {} };
 
@@ -27,7 +27,7 @@ const LOADING_WEBVIEW_DATA: WebviewData = {
   projectTokenBreakdowns: {},
   projectModelIds: {},
   quotaState: { status: "loading", message: "Loading\u2026", summary: null },
-  hero: { todayTokens: 0, totalTokens: 0, totalCost: 0, totalSteps: 0 },
+  hero: { todayTokens: 0, totalTokens: 0, totalCost: 0, totalSessions: 0 },
   projects: [],
   grandTokens: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheRead: 0 },
   costEntries: [],
@@ -126,6 +126,19 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       databasePath: DB_PATH,
     };
     void this.view.webview.postMessage({ type: "settingsData", data: settings });
+  }
+
+  public showLoading(quotaState: QuotaState): void {
+    this.quotaState = quotaState;
+    const currentView = this.view;
+    if (!currentView || !this.latestWebviewData) {
+      return;
+    }
+    this.latestWebviewData = {
+      ...this.latestWebviewData,
+      quotaState: { status: quotaState.status, message: quotaState.message, summary: null },
+    };
+    this.sendToWebview(currentView);
   }
 
   private sendToWebview(currentView: vscode.WebviewView): void {

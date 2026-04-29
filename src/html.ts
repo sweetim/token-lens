@@ -1,8 +1,8 @@
-import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "./types.js";
+import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "@/types";
 import * as vscode from "vscode";
-import { buildWebviewData } from "./webview/data.js";
-import { buildWebviewDocument } from "./webview/document.js";
-import type { WebviewData } from "./webview-contract.js";
+import { buildWebviewData } from "@/webview/data";
+import { buildWebviewDocument } from "@/webview/document";
+import type { WebviewData } from "@/webview-contract";
 
 type WebviewHtmlParams = {
   extensionUri: vscode.Uri;

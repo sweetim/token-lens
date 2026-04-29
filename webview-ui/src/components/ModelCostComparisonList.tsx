@@ -1,8 +1,8 @@
-import type { ModelCostEstimate } from "../../../src/webview-model-cost.js";
-import type { PricingStateData } from "../../../src/webview-contract.js";
-import { formatTokensCompact } from "../view-helpers.js";
-import { AnchoredTooltip, useAnchoredTooltip } from "./AnchoredTooltip.js";
-import { useIntersectionLazyLoad } from "../hooks/useIntersectionLazyLoad.js";
+import type { ModelCostEstimate } from "@shared/webview-model-cost";
+import type { PricingStateData } from "@shared/webview-contract";
+import { formatTokensCompact, normalizeModelNameForMatch } from "@/view-helpers";
+import { AnchoredTooltip, useAnchoredTooltip } from "@/components/AnchoredTooltip";
+import { useIntersectionLazyLoad } from "@/hooks/useIntersectionLazyLoad";
 
 const MODEL_ID_CLASS = "mr-3 min-w-0 flex-auto overflow-hidden text-ellipsis whitespace-nowrap font-mono";
 const COST_DETAILS_TOOLTIP_WIDTH = 390;
@@ -181,7 +181,7 @@ function ModelCostComparisonList({
             tabIndex={costDetails ? 0 : undefined}
             {...(getRowDataAttributes?.(entry) ?? {})}
           >
-            <span class={`${MODEL_ID_CLASS}${highlightModelIds?.has(entry.modelId.replace(/^[^/]+\//, "")) || isSaved?.(entry.modelId) ? " text-(--accent)" : " text-(--fg)"}`}>{entry.modelId}</span>
+            <span class={`${MODEL_ID_CLASS}${highlightModelIds?.has(normalizeModelNameForMatch(entry.modelId)) || isSaved?.(entry.modelId) ? " text-(--accent)" : " text-(--fg)"}`}>{entry.modelId}</span>
             <span class="shrink-0 font-mono font-semibold text-(--accent)">${entry.cost.toFixed(2)}</span>
           </div>
         );

@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from "preact/hooks";
-import { computeModelCostEstimates } from "../../../src/webview-model-cost.js";
-import type { CostEntryData, CostFilterState, ModelPricing, PricingStateData, TokenBreakdown } from "../../../src/webview-contract.js";
-import { CostFiltersPanel } from "./CostFiltersPanel.js";
-import { CostTokenSummary } from "./CostTokenSummary.js";
-import { ModelCostComparisonList } from "./ModelCostComparisonList.js";
+import { computeModelCostEstimates } from "@shared/webview-model-cost";
+import type { CostEntryData, CostFilterState, ModelPricing, PricingStateData, TokenBreakdown } from "@shared/webview-contract";
+import { CostFiltersPanel } from "@/components/CostFiltersPanel";
+import { CostTokenSummary } from "@/components/CostTokenSummary";
+import { ModelCostComparisonList } from "@/components/ModelCostComparisonList";
 
 type CostTabProps = {
   grandTokens: TokenBreakdown;

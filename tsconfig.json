@@ -1,8 +1,10 @@
 {
 	"compilerOptions": {
-		"module": "Node16",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
 		"types": [
-			"node"
+			"node",
+			"bun"
 		],
 		"target": "ES2022",
 		"lib": [
@@ -12,6 +14,10 @@
 		"rootDir": "src",
 		"strict": true,
 		"skipLibCheck": true,
+		"paths": {
+			"@/*": ["./src/*"],
+			"@shared/*": ["./src/*"]
+		}
 	},
 	"include": ["src"],
 	"exclude": ["webview-ui"]

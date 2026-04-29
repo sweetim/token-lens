@@ -112,7 +112,7 @@ type HeroStatsData = {
   todayTokens: number;
   totalTokens: number;
   totalCost: number;
-  totalSteps: number;
+  totalSessions: number;
 };
 
 type ProjectCardData = {

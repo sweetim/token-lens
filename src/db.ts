@@ -6,7 +6,7 @@ import { desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/sql-js";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import initSqlJs from "sql.js";
-import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens } from "./types.js";
+import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens } from "@/types";
 
 const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
 const PROJECT_ROOT_PREFIX = `${homedir()}/projects/`;

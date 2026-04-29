@@ -1,5 +1,5 @@
-import type { TokenBreakdown } from "../../../src/webview-contract.js";
-import { formatTokensCompact } from "../view-helpers.js";
+import type { TokenBreakdown } from "@shared/webview-contract";
+import { formatTokensCompact } from "@/view-helpers";
 
 function CostTokenSummary({ grandTokens }: { grandTokens: TokenBreakdown }) {
   const totalTokens = grandTokens.inputTokens + grandTokens.outputTokens + grandTokens.reasoningTokens + grandTokens.cacheRead;

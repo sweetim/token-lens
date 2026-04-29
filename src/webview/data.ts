@@ -1,10 +1,10 @@
 import dayjs from "dayjs";
-import { SEG_COLORS } from "../bars.js";
-import { formatDay, formatDurationMs, formatTokens } from "../format.js";
-import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelDataWithStatus, toOpenRouterModelId } from "../model-data.js";
-import type { ModelData } from "../model-data.js";
-import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "../types.js";
-import type { ChartConfig, ChartDayItem, CostEntryData, PricingStateData, PricingStatus, ProjectCardData, QuotaStateData, TokenBreakdown, WebviewData } from "../webview-contract.js";
+import { SEG_COLORS } from "@/bars";
+import { formatDay, formatDurationMs, formatTokens } from "@/format";
+import { ALLOWED_PROVIDERS, THREE_MONTHS_MS, fetchModelDataWithStatus, toOpenRouterModelId } from "@/model-data";
+import type { ModelData } from "@/model-data";
+import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens, QuotaState } from "@/types";
+import type { ChartConfig, ChartDayItem, CostEntryData, PricingStateData, PricingStatus, ProjectCardData, QuotaStateData, TokenBreakdown, WebviewData } from "@/webview-contract";
 
 function getDailyChartConfigs(): ChartConfig[] {
   return [
@@ -182,7 +182,7 @@ async function buildWebviewData(
 ): Promise<WebviewData> {
   const grandTotal = projects.reduce((sum, row) => sum + row.totalTokens, 0);
   const grandCost = projects.reduce((sum, row) => sum + row.totalCost, 0);
-  const grandSteps = projects.reduce((sum, row) => sum + row.steps, 0);
+  const grandSessions = projects.reduce((sum, row) => sum + row.sessions, 0);
   const grandTokens: TokenBreakdown = {
     inputTokens: projects.reduce((sum, row) => sum + row.inputTokens, 0),
     outputTokens: projects.reduce((sum, row) => sum + row.outputTokens, 0),
@@ -259,7 +259,7 @@ async function buildWebviewData(
       todayTokens: todayTotalTokens,
       totalTokens: grandTotal,
       totalCost: grandCost,
-      totalSteps: grandSteps,
+      totalSessions: grandSessions,
     },
     projects: buildProjectCardsData(projects),
     grandTokens,
@@ -272,4 +272,4 @@ async function buildWebviewData(
   };
 }
 
-export { buildWebviewData, buildPricingStateData };
+export { buildWebviewData, buildPricingStateData, buildCostEntries, buildProjectModelIds };

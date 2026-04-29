@@ -6,9 +6,13 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noEmit": true,
-    "sourceMap": true,
+    "types": ["bun"],
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../src/*"]
+    }
   },
-  "include": ["src", "../src/webview-contract.ts", "../src/webview-model-cost.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../src/webview-contract.ts", "../src/webview-model-cost.ts"]
 }

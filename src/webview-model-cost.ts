@@ -1,4 +1,4 @@
-import type { ModelPricing, TokenBreakdown } from "./webview-contract.js";
+import type { ModelPricing, TokenBreakdown } from "@shared/webview-contract";
 
 type ModelCostEstimate = {
   modelId: string;

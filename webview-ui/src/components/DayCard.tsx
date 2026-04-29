@@ -1,7 +1,8 @@
-import { computeModelCostEstimates } from "../../../src/webview-model-cost.js";
-import type { DayDataItem, ModelPricing, PricingStateData } from "../../../src/webview-contract.js";
-import { MODEL_COLORS } from "../constants.js";
-import { ModelCostComparisonList } from "./ModelCostComparisonList.js";
+import { computeModelCostEstimates } from "@shared/webview-model-cost";
+import type { DayDataItem, ModelPricing, PricingStateData } from "@shared/webview-contract";
+import { normalizeModelNameForMatch } from "@/view-helpers";
+import { MODEL_COLORS } from "@/constants";
+import { ModelCostComparisonList } from "@/components/ModelCostComparisonList";
 
 type DayCardProps = {
   item: DayDataItem;
@@ -86,7 +87,7 @@ function DayCard({ item, index, expanded, onToggle, modelPricing, pricingState, 
   })();
   const modelCostIds = [...new Set([...usedModelIdsWithPricing, ...savedModels])];
 
-  const usedModelIds = new Set(item.models.map((model) => model.openRouterModelId.replace(/^[^/]+\//, "")));
+  const usedModelIds = new Set(item.models.map((model) => normalizeModelNameForMatch(model.openRouterModelId)));
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, {
     inputTokens: item.inputTokens,
     outputTokens: item.outputTokens,

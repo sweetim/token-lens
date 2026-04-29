@@ -68,6 +68,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 The rule: every implementation change must include a corresponding doc change. Don't leave docs stale.
 
+## 6. Test & Verify
+
+**Match verification to the type of change.**
+
+- **Logic changes**: Write unit tests that exercise the new or changed behavior. Run them and confirm they pass before finishing.
+- **UI changes**: Do not write automated tests. Instead, end your response with a brief list of specific things the user should manually check (e.g., "Verify the button is disabled when X", "Confirm the modal closes on save").
+
 # Coding Rules
 
 - Use `type` instead of `interface` when defining TypeScript types to ensure

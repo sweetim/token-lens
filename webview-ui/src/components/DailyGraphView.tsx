@@ -1,6 +1,6 @@
-import type { ChartConfig, ChartDayItem } from "../../../src/webview-contract.js";
-import { formatTokensCompact } from "../view-helpers.js";
-import { LineChart, PieChart } from "./Chart.js";
+import type { ChartConfig, ChartDayItem } from "@shared/webview-contract";
+import { formatTokensCompact } from "@/view-helpers";
+import { LineChart, PieChart } from "@/components/Chart";
 
 type DailyGraphViewProps = {
   chartData: ChartDayItem[];

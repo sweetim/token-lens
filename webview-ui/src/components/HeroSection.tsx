@@ -1,5 +1,5 @@
-import type { HeroStatsData } from "../../../src/webview-contract.js";
-import { formatTokensCompact } from "../view-helpers.js";
+import type { HeroStatsData } from "@shared/webview-contract";
+import { formatTokensCompact } from "@/view-helpers";
 
 const HERO_STAT_CLASS = "flex flex-col gap-0.5";
 const HERO_VALUE_CLASS = "text-lg font-bold leading-[1.1] tabular-nums";
@@ -13,7 +13,7 @@ function HeroSection({ hero }: { hero: HeroStatsData }) {
         <div class={HERO_STAT_CLASS}><span class={`${HERO_VALUE_CLASS} text-(--accent2)`}>{formatTokensCompact(hero.todayTokens)}</span><span class={HERO_LABEL_CLASS}>Today</span></div>
         <div class={HERO_STAT_CLASS}><span class={`${HERO_VALUE_CLASS} text-(--accent)`}>{formatTokensCompact(hero.totalTokens)}</span><span class={HERO_LABEL_CLASS}>Total</span></div>
         <div class={HERO_STAT_CLASS}><span class={`${HERO_VALUE_CLASS} text-(--green)`}>${hero.totalCost.toFixed(2)}</span><span class={HERO_LABEL_CLASS}>Costs</span></div>
-        <div class={HERO_STAT_CLASS}><span class={`${HERO_VALUE_CLASS} text-(--orange)`}>{hero.totalSteps}</span><span class={HERO_LABEL_CLASS}>Steps</span></div>
+        <div class={HERO_STAT_CLASS}><span class={`${HERO_VALUE_CLASS} text-(--orange)`}>{hero.totalSessions}</span><span class={HERO_LABEL_CLASS}>Sessions</span></div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { TokenSidebarProvider } from "./tokenSidebar";
-import type { QuotaState, QuotaSummary } from "./types.js";
+import { TokenSidebarProvider } from "@/tokenSidebar";
+import type { QuotaState, QuotaSummary } from "@/types";
 
 type UsageDetail = { modelCode: string; usage: number };
 
@@ -377,6 +377,11 @@ async function fetchQuota(): Promise<QuotaFetchResult> {
 
 async function refreshQuota(showLoadingState: boolean): Promise<void> {
   if (refreshPromise) {
+    if (showLoadingState) {
+      quotaState = LOADING_QUOTA_STATE;
+      applyStatusBarState(LOADING_QUOTA_STATE);
+      tokenSidebar.showLoading(LOADING_QUOTA_STATE);
+    }
     return refreshPromise;
   }
 

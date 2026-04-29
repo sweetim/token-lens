@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "preact/hooks";
-import { computeModelCostEstimates } from "../../../src/webview-model-cost.js";
+import { computeModelCostEstimates } from "@shared/webview-model-cost";
 import type {
   ChartConfig,
   ChartDayItem,
@@ -7,10 +7,10 @@ import type {
   PricingStateData,
   ProjectCardData,
   TokenBreakdown,
-} from "../../../src/webview-contract.js";
-import { formatTokensCompact } from "../view-helpers.js";
-import { LineChart } from "./Chart.js";
-import { ModelCostComparisonList } from "./ModelCostComparisonList.js";
+} from "@shared/webview-contract";
+import { formatTokensCompact, formatDurationMs, normalizeModelNameForMatch } from "@/view-helpers";
+import { LineChart } from "@/components/Chart";
+import { ModelCostComparisonList } from "@/components/ModelCostComparisonList";
 
 const SEGMENT_COLORS = {
   input: "#3794ff",
@@ -42,19 +42,6 @@ type ProjectStat = {
   value: string | number;
   label: string;
 };
-
-function formatDurationMs(ms: number): string {
-  if (ms <= 0) return "0m";
-  const totalMinutes = Math.floor(ms / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours >= 24) {
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    return remainingHours > 0 ? days + "d " + remainingHours + "h" : days + "d";
-  }
-  return hours > 0 ? hours + "h " + minutes + "m" : minutes + "m";
-}
 
 function ProjectCardHeader({
   projectName,
@@ -147,7 +134,7 @@ function ProjectCard({
 }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
   const sortedModels = useMemo(() => [...project.models].sort((left, right) => right.totalTokens - left.totalTokens), [project.models]);
-  const usedModelIds = useMemo(() => new Set(project.models.map((model) => model.openRouterModelId.replace(/^[^/]+\//, ""))), [project.models]);
+  const usedModelIds = useMemo(() => new Set(project.models.map((model) => normalizeModelNameForMatch(model.openRouterModelId))), [project.models]);
   const savedModels = getSavedModels();
   const modelCostIds = [...new Set([...allProjectModelIds, ...savedModels])];
   const modelCosts = computeModelCostEstimates(modelCostIds, modelPricing, projectTokenBreakdown);

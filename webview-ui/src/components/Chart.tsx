@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from "preact/hooks";
 import { Fragment } from "preact";
-import type { ChartConfig, ChartDayItem, ChartSeries } from "../../../src/webview-contract.js";
-import { MODEL_COLORS } from "../constants.js";
-import { formatTokensCompact } from "../view-helpers.js";
+import type { ChartConfig, ChartDayItem, ChartSeries } from "@shared/webview-contract";
+import { MODEL_COLORS } from "@/constants";
+import { formatTokensCompact } from "@/view-helpers";
 
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 240;

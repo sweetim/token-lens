@@ -1,15 +1,15 @@
 import { useState } from "preact/hooks";
-import type { WebviewData, SettingsData } from "../../src/webview-contract.js";
-import { getCostFilterState, getSavedModels, setCostFilterState, setSavedModels } from "./bootstrap.js";
-import { CostTab } from "./components/CostTab.js";
-import { HeroSection } from "./components/HeroSection.js";
-import { ProjectCard } from "./components/ProjectCard.js";
-import { QuotaSection } from "./components/QuotaSection.js";
-import { SettingsPanel } from "./components/SettingsPanel.js";
-import { TabsBar } from "./components/TabsBar.js";
-import { TimeTab } from "./components/TimeTab.js";
-import type { AppTab } from "./components/TabsBar.js";
-import { useIntersectionLazyLoad } from "./hooks/useIntersectionLazyLoad.js";
+import type { WebviewData, SettingsData } from "@shared/webview-contract";
+import { getCostFilterState, getSavedModels, setCostFilterState, setSavedModels } from "@/bootstrap";
+import { CostTab } from "@/components/CostTab";
+import { HeroSection } from "@/components/HeroSection";
+import { ProjectCard } from "@/components/ProjectCard";
+import { QuotaSection } from "@/components/QuotaSection";
+import { SettingsPanel } from "@/components/SettingsPanel";
+import { TabsBar } from "@/components/TabsBar";
+import { TimeTab } from "@/components/TimeTab";
+import type { AppTab } from "@/components/TabsBar";
+import { useIntersectionLazyLoad } from "@/hooks/useIntersectionLazyLoad";
 
 const EMPTY_CLASS = "px-4 py-10 text-center text-xs leading-[1.6] text-(--muted)";
 

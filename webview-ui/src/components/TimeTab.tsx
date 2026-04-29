@@ -1,9 +1,9 @@
 import { useState, useMemo } from "preact/hooks";
-import { formatTokensCompact } from "../view-helpers.js";
-import type { ChartConfig, ChartDayItem, DayDataItem, ModelPricing, PricingStateData } from "../../../src/webview-contract.js";
-import { DailyCardsView } from "./DailyCardsView.js";
-import { DailyGraphView } from "./DailyGraphView.js";
-import { DailyToolbar } from "./DailyToolbar.js";
+import { formatTokensCompact } from "@/view-helpers";
+import type { ChartConfig, ChartDayItem, DayDataItem, ModelPricing, PricingStateData } from "@shared/webview-contract";
+import { DailyCardsView } from "@/components/DailyCardsView";
+import { DailyGraphView } from "@/components/DailyGraphView";
+import { DailyToolbar } from "@/components/DailyToolbar";
 
 type Period = "daily" | "weekly" | "monthly";
 

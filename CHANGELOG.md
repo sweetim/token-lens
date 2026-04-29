@@ -6,6 +6,28 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.6.0]
+
+- Migrated webview styling to Tailwind CSS for maintainability.
+- Added a settings panel and lazy loading for webview components.
+- Enhanced pricing UX with improved model cost comparison and identification.
+- Optimized data loading performance in the webview.
+- Simplified token labels in summary and project cards.
+
+## [1.5.3]
+
+- Updated marketplace badge image format.
+
+## [1.5.2]
+
+- Added VS Code Marketplace badge to the README.
+- Updated tagline and streamlined the feature list.
+- Updated landing image format to JPG.
+
+## [1.5.1]
+
+- Updated changelog and landing image for version 1.5.0.
+
 ## [1.5.0]
 
 - Rewrote the webview UI using Preact for a lighter runtime.

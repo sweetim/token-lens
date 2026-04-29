@@ -1,7 +1,7 @@
 import { useState, useCallback } from "preact/hooks";
-import type { DayDataItem, ModelPricing, PricingStateData } from "../../../src/webview-contract.js";
-import { useIntersectionLazyLoad } from "../hooks/useIntersectionLazyLoad.js";
-import { DayCard } from "./DayCard.js";
+import type { DayDataItem, ModelPricing, PricingStateData } from "@shared/webview-contract";
+import { useIntersectionLazyLoad } from "@/hooks/useIntersectionLazyLoad";
+import { DayCard } from "@/components/DayCard";
 
 type DailyCardsViewProps = {
   dayData: DayDataItem[];

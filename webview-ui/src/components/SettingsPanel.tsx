@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
-import type { SettingsData } from "../../../src/webview-contract.js";
-import { postWebviewMessage } from "../bootstrap.js";
+import type { SettingsData } from "@shared/webview-contract";
+import { postWebviewMessage } from "@/bootstrap";
 
 type SettingsPanelProps = {
   settings: SettingsData;

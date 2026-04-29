@@ -1,5 +1,5 @@
-import { DEFAULT_COST_FILTER_STATE, WEBVIEW_DATA_ELEMENT_ID } from "../../src/webview-contract.js";
-import type { CostFilterState, WebviewData, WebviewOutboundMessage, WebviewPersistedState } from "../../src/webview-contract.js";
+import { DEFAULT_COST_FILTER_STATE, WEBVIEW_DATA_ELEMENT_ID } from "@shared/webview-contract";
+import type { CostFilterState, WebviewData, WebviewOutboundMessage, WebviewPersistedState } from "@shared/webview-contract";
 
 type VsCodeApi<State> = {
   getState(): State | undefined;

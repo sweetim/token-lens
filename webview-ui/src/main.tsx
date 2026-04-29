@@ -1,9 +1,9 @@
 import { render, type ComponentChildren } from "preact";
 import { useState, useEffect, useCallback } from "preact/hooks";
-import { App } from "./App.js";
-import { postWebviewMessage, readWebviewData } from "./bootstrap.js";
-import "./tailwind.css";
-import type { WebviewData, WebviewInboundMessage, SettingsData } from "../../src/webview-contract.js";
+import { App } from "@/App";
+import { postWebviewMessage, readWebviewData } from "@/bootstrap";
+import "@/tailwind.css";
+import type { WebviewData, WebviewInboundMessage, SettingsData } from "@shared/webview-contract";
 
 const DEFAULT_SETTINGS: SettingsData = {
   hasApiKey: false,
