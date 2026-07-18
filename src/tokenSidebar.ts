@@ -97,7 +97,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "dist")],
     };
-    webviewView.webview.onDidReceiveMessage((message: WebviewOutboundMessage | undefined) => {
+    webviewView.webview.onDidReceiveMessage(async (message: WebviewOutboundMessage | undefined) => {
       if (!message || webviewView !== this.view) {
         return;
       }
@@ -116,13 +116,13 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       }
 
       if (message.type === "saveApiKey") {
-        void this.settingsCallbacks?.saveApiKey(message.apiKey);
+        await this.settingsCallbacks?.saveApiKey(message.apiKey);
         void this.handleRequestSettings();
         return;
       }
 
       if (message.type === "saveRefreshInterval") {
-        void this.settingsCallbacks?.saveRefreshIntervalMinutes(message.minutes);
+        await this.settingsCallbacks?.saveRefreshIntervalMinutes(message.minutes);
         void this.handleRequestSettings();
         return;
       }

@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { SettingsData } from "@shared/webview-contract";
 import { postWebviewMessage } from "@/bootstrap";
 
@@ -32,18 +32,27 @@ function SettingsPanel({ settings, onClose }: SettingsPanelProps) {
   const [refreshInterval, setRefreshInterval] = useState(String(settings.refreshIntervalMinutes));
   const [intervalSaved, setIntervalSaved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const pendingToastRef = useRef<string | null>(null);
 
   function showToast(message: string) {
     setToast(message);
     setTimeout(() => setToast(null), 2500);
   }
 
+  useEffect(() => {
+    if (pendingToastRef.current !== null) {
+      const message = pendingToastRef.current;
+      pendingToastRef.current = null;
+      showToast(message);
+    }
+  }, [settings]);
+
   function handleSaveApiKey() {
     if (!apiKey.trim()) return;
     postWebviewMessage({ type: "saveApiKey", apiKey: apiKey.trim() });
     setApiKey("");
     setApiKeySaved(true);
-    showToast("API Key saved successfully");
+    pendingToastRef.current = "API Key saved successfully";
     setTimeout(() => setApiKeySaved(false), 2000);
   }
 
@@ -52,7 +61,7 @@ function SettingsPanel({ settings, onClose }: SettingsPanelProps) {
     if (!Number.isFinite(minutes) || minutes < 1) return;
     postWebviewMessage({ type: "saveRefreshInterval", minutes });
     setIntervalSaved(true);
-    showToast("Refresh interval saved successfully");
+    pendingToastRef.current = "Refresh interval saved successfully";
     setTimeout(() => setIntervalSaved(false), 2000);
   }
 
