@@ -180,7 +180,7 @@ function buildTooltip(quotaState: QuotaState): vscode.MarkdownString {
   const barFilled = Math.round((usedPct / 100) * 20);
   let bar = "";
   for (let index = 0; index < 20; index += 1) {
-    const color = index < barFilled ? gradientColors[Math.min(index, gradientColors.length - 1)] : "#555";
+    const color = index < barFilled ? gradientColors[Math.floor(index / 2)] : "#555";
     bar += `<span style="color:${color};">█</span>`;
   }
 
