@@ -274,4 +274,4 @@ async function buildWebviewData(
   };
 }
 
-export { buildWebviewData, buildPricingStateData, buildCostEntries, buildProjectModelIds };
+export { buildWebviewData, buildPricingStateData, buildCostEntries, buildProjectModelIds, buildQuotaStateData };

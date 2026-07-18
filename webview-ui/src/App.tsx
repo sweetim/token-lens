@@ -37,7 +37,7 @@ function App({ data, settings, showSettings, onCloseSettings }: AppProps) {
         <p class={EMPTY_CLASS}>
           {isLoading
             ? "Loading token usage\u2026"
-            : <>No token usage data found.<br />Make sure Kilo is installed and ~/.local/share/kilo/kilo.db exists.</>}
+            : <>No token usage data found.<br />Make sure Kilo is installed and the database path in TokenLens settings points to its kilo.db.</>}
         </p>
       </>
     );

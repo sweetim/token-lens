@@ -55,7 +55,7 @@ webview-ui/
     │   ├── CostTokenSummary.tsx  # Cost-tab token summary strip
     │   ├── ModelCostComparisonList.tsx # Shared model-cost list used by project, day, and cost views
     │   ├── AnchoredTooltip.tsx   # Shared anchored tooltip behavior for model-cost info affordances
-    │   └── SettingsPanel.tsx     # Settings panel for API key, database path display, and refresh interval configuration
+    │   └── SettingsPanel.tsx     # Settings panel for API key, database path, and refresh interval configuration
     └── hooks/
         └── useIntersectionLazyLoad.ts # Shared intersection-observer hook for lazy-loading list items in batches of 20
 ```
@@ -66,7 +66,7 @@ webview-ui/
 |--------|----------|---------|
 | z.ai API | `https://api.z.ai/api/monitor/usage/quota/limit` | Quota percentage, reset time (status bar) |
 | OpenRouter API | `https://openrouter.ai/api/v1/models` | Model pricing data for cost estimation (cached 1 hour; project-level comparisons additionally apply provider and recency filters, while the global cost list applies UI filters client-side) |
-| Local DB | `~/.local/share/kilo/kilo.db` | Per-project and per-day token breakdowns (sidebar) |
+| Local DB | `token-lens.databasePath` setting; defaults to `$XDG_DATA_HOME/kilo/kilo.db`, `~/.local/share/kilo/kilo.db`, or `%LOCALAPPDATA%\kilo\kilo.db` on Windows | Per-project and per-day token breakdowns (sidebar) |
 
 ### UI Components
 
@@ -74,7 +74,7 @@ webview-ui/
    - Shows current token usage percentage (e.g. `$(zap) 42%`)
    - Color-coded background: normal → warning (≥50%) → error (≥80%)
    - Rich Markdown tooltip with `Token Lens - zai`, a single-row gradient z.ai usage bar plus percentage, and time until reset
-   - Auto-refreshes on a configurable interval (default 5 minutes, adjustable via Settings panel)
+   - Auto-refreshes on a configurable interval (default 5 minutes, adjustable via the `token-lens.refreshIntervalMinutes` VS Code setting or the Settings panel)
    - Distinguishes loading, missing-key/auth failures, and transient API failures instead of treating every failure as "no API key"
    - Keeps the last successful quota snapshot during transient failures or rate limits, marks it stale, and retries with backoff before returning to the normal 5-minute poll
 
@@ -88,7 +88,7 @@ webview-ui/
         - **Cards view:** Intersection-observer-based lazy-loaded list of day-by-day usage with horizontal bar charts. Each day's bars are scaled relative to that day's highest token type value (not across all days), so the dominant token type always fills 100%. Rows support expand/collapse.
         - **Graph view:** SVG line charts for Total Tokens (area fill), Token Breakdown (multi-series), Sessions And Steps, and LLM Usage (pie chart). A usage heatmap renders below the pie chart and is independent of the Daily/Weekly/Monthly period toggle: it always shows a GitHub-style weekday × week calendar grid of total tokens covering the last 6 months (26 weeks ending at the current week), fed from raw per-day data. The grid is laid out as flex week-columns that fill the card width (no horizontal scrolling), with color intensity per day relative to the peak day in the visible window (no axis labels). Summary stat labels and chart data update with the active daily/weekly/monthly aggregation, and series can be toggled via legend buttons.
       - **Cost tab:** Estimated per-model cost list with provider/sort/age filters. The tab displays the current OpenRouter pricing status, disables filters while pricing is unavailable or still loading, and shows skeleton rows instead of silently hiding pricing results during refresh. Clicking a model in this list saves it to VS Code `globalState` so the pinned models persist across workspaces and are included alongside project/period-specific models in cost comparisons across the Projects and Time tabs.
-     - **Data injection:** On first load, `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag and `webview-ui/src/bootstrap.ts` parses it. After the Preact root attaches its message listener, it sends a `{ type: "ready" }` handshake so the extension can safely replay the latest payload. The sidebar provider only applies the latest completed refresh, so slower stale refreshes cannot overwrite a newer quota snapshot. Subsequent updates are sent via `postMessage` with a `{ type: "fullUpdate", data: WebviewData }` message, received by the `Root` wrapper in `webview-ui/src/main.tsx` which updates Preact state incrementally — preserving scroll position, active tab, expanded cards, and filter state.
+     - **Data injection:** On first load, `src/webview/document.ts` serializes the payload into a `<script type="application/json">` tag and `webview-ui/src/bootstrap.ts` parses it. After the Preact root attaches its message listener, it sends a `{ type: "ready" }` handshake so the extension can safely replay the latest payload. The sidebar provider only applies the latest completed refresh, so slower stale refreshes cannot overwrite a newer quota snapshot. Subsequent updates are sent via `postMessage` with a `{ type: "fullUpdate", data: WebviewData }` message, received by the `Root` wrapper in `webview-ui/src/main.tsx` which updates Preact state incrementally — preserving scroll position, active tab, expanded cards, and filter state. Quota-only changes (the common case on the poll interval) are sent as a lightweight `{ type: "quotaUpdate", quotaState: QuotaStateData }` message that patches only the quota section: the sidebar provider skips re-querying the database and rebuilding the payload entirely when the database file mtime is unchanged and the OpenRouter pricing cache is still fresh. A full rebuild is forced by the `token-lens.refresh` command and by `token-lens.databasePath` configuration changes.
       - **Webview persistence:** cost filters are stored with VS Code webview state (`acquireVsCodeApi().getState()/setState()`). Saved models are persisted globally via VS Code `globalState` so they are shared across all workspaces.
 
 ### Commands
@@ -160,7 +160,14 @@ webview-ui/
 
 ### Environment Variables
 
-- None. The extension does not read configuration from `process.env` or `Bun.env`; the z.ai API key is stored in VS Code `SecretStorage`.
+- `XDG_DATA_HOME` / `LOCALAPPDATA` — only consulted to compute the default Kilo database location when `token-lens.databasePath` is not set. The z.ai API key is stored in VS Code `SecretStorage`.
+
+### VS Code Settings
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `token-lens.databasePath` | `""` (platform default) | Path to the Kilo SQLite database |
+| `token-lens.refreshIntervalMinutes` | `5` | Auto-refresh interval for quota and usage data (minimum 1). A legacy value stored in `globalState` by older versions is migrated to this setting on activation. |
 
 ### Validation
 
@@ -171,14 +178,14 @@ webview-ui/
 ## Key Implementation Details
 
 - **API Key Storage:** Uses VS Code's `SecretStorage` API (encrypted, OS-level keychain integration)
-- **DB Queries:** Uses Drizzle ORM with the `sql.js` driver (pure WASM SQLite, no native modules) to query the local SQLite database. `src/db.ts` defines typed table metadata for the external Kilo tables it reads (`part`, `message`, `session`, `project`), loads the database into memory from disk, and executes the reporting queries synchronously against that in-memory copy. The six queries are still project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries still extract `providerID` and `modelID` from the `message.data` JSON field through SQLite `json_extract(...)` expressions. All queries filter on `step-finish` type entries. Day grouping applies the runtime local UTC offset directly from `dayjs().utcOffset()` rather than UTC, so daily totals align with the user's actual calendar day.
+- **DB Queries:** Uses Drizzle ORM with the `sql.js` driver (pure WASM SQLite, no native modules) to query the local SQLite database. `src/db.ts` defines typed table metadata for the external Kilo tables it reads (`part`, `message`, `session`, `project`), loads the database into memory from disk with async `node:fs/promises` reads (re-reading only when the file mtime changes), and executes the reporting queries synchronously against that in-memory copy. The database path is resolved from the `token-lens.databasePath` setting, falling back to a platform default (`$XDG_DATA_HOME`, `~/.local/share`, or `%LOCALAPPDATA%` on Windows, plus `kilo/kilo.db`). Project display names are derived in JS by stripping the home-directory prefix from each project worktree path (`toProjectDisplayName`), replacing the old hardcoded `~/projects/` SQL `REPLACE`. The six queries are still project totals, day totals, project-day totals, model costs (per project/provider/model), project models (step/token/cost breakdown), and day models. The project, project-day, and model cost queries additionally join the `project` table. Model cost/project-model/day-model queries still extract `providerID` and `modelID` from the `message.data` JSON field through SQLite `json_extract(...)` expressions. All queries filter on `step-finish` type entries. Day grouping applies the runtime local UTC offset directly from `dayjs().utcOffset()` rather than UTC, so daily totals align with the user's actual calendar day.
 - **No External CLI Dependencies:** The extension does not require the `sqlite3` CLI or any other external command-line tool to be installed.
 - **Webview:** The sidebar uses a webview with scripts enabled, `localResourceRoots` locked to `dist/`, a CSP meta tag, a nonce for the client bundle, and a flex-based layout so the active tab can fill the sidebar reliably. On first load the full HTML document is injected with all data; subsequent data updates are pushed via `postMessage` to avoid destroying Preact component state (scroll position, tab selection, expanded cards, filters).
 - **Quota Recovery:** The extension stores the last successful quota snapshot in VS Code `globalState`, restores it for startup recovery when available, clears it on setup/auth errors, and uses timeout-based retry backoff for transient z.ai failures.
 - **Daily Virtual List:** The daily tab, projects list, and model cost comparison lists use intersection observer-based lazy loading via a shared `useIntersectionLazyLoad` hook. Items are rendered in batches of 20 as the user scrolls — a sentinel element at the bottom of the visible items triggers the next batch via `IntersectionObserver`.
 - **Runtime Dependencies:** `vscode` remains external to the bundle. `dayjs` is used at runtime for local-day grouping, model-data cache timing, and date-based summaries. `drizzle-orm` is bundled into `dist/extension.js` as the typed query layer. `sql.js` still provides the runtime SQLite engine, so the packaged extension must include `node_modules/sql.js`; its `sql-wasm.wasm` asset is also copied into `dist/` for `locateFile` to resolve. The webview loads `dist/webview-client.js` and inlines the esbuild-generated `dist/webview-client.css`, booting from a JSON payload script rather than `window.__TOKEN_LENS_DATA__`.
 - **Model Cost Estimation:** `model-data.ts` fetches model pricing from the OpenRouter API (`/api/v1/models`) and caches it in memory for 1 hour. The serialized `WebviewData.pricingState` reports `loading`, `ready`, `cached`, or `unavailable` so the webview can keep token usage visible while showing inline pricing status, skeleton rows, cached-price notices, or unavailable messaging. Provider IDs from the local DB are mapped to OpenRouter format via `PROVIDER_ID_MAP`. Project-derived cost comparison model IDs in `src/webview/data.ts` apply the allowed-provider list (openai, deepseek, moonshotai, anthropic, z-ai, qwen, minimax) and a 90-day recency window before costs are computed from input, output, reasoning, and cache-read token totals. Models pinned from the global Cost tab are appended client-side to project and period comparisons without reapplying those provider/age filters. The global Cost tab starts from the fetched pricing list and applies provider/sort/age filters in the webview UI. Browser-side model-cost comparison rows expose a hover/focus popover that shows each token type's per-million-token price and the estimated-cost formula breakdown.
-- **Settings Panel:** The extension exposes an in-webview settings panel (`webview-ui/src/components/SettingsPanel.tsx`) triggered by the `token-lens.openSettings` command when the sidebar webview already exists. The command asks the sidebar provider to send a `showSettings` inbound message to the webview, which requests current settings via `requestSettings`. The extension responds with `settingsData` containing `hasApiKey`, `refreshIntervalMinutes`, and `databasePath`. The webview can save a new API key (`saveApiKey`) or refresh interval (`saveRefreshInterval`) back to the extension, which persists them via SecretStorage and globalState respectively.
+- **Settings Panel:** The extension exposes an in-webview settings panel (`webview-ui/src/components/SettingsPanel.tsx`) triggered by the `token-lens.openSettings` command when the sidebar webview already exists. The command asks the sidebar provider to send a `showSettings` inbound message to the webview, which requests current settings via `requestSettings`. The extension responds with `settingsData` containing `hasApiKey`, `refreshIntervalMinutes`, and `databasePath`. The webview can save a new API key (`saveApiKey`), refresh interval (`saveRefreshInterval`), or database path (`saveDatabasePath`) back to the extension. The API key persists via SecretStorage; the interval and database path persist as the `token-lens.refreshIntervalMinutes` and `token-lens.databasePath` VS Code settings (global scope). A `workspace.onDidChangeConfiguration` listener reschedules polling on interval changes and reopens the database plus forces a sidebar rebuild on path changes, so edits made directly in VS Code settings take effect immediately.
 
 ---
 
@@ -220,7 +227,7 @@ webview-ui/
 | `webview-ui/src/components/CostTokenSummary.tsx` | Cost-tab token summary strip |
 | `webview-ui/src/components/ModelCostComparisonList.tsx` | Shared model-cost list used by project, day, and cost views |
 | `webview-ui/src/components/AnchoredTooltip.tsx` | Shared anchored tooltip behavior for model-cost info affordances |
-| `webview-ui/src/components/SettingsPanel.tsx` | In-webview settings panel for API key, database path display, and refresh interval configuration |
+| `webview-ui/src/components/SettingsPanel.tsx` | In-webview settings panel for API key, database path, and refresh interval configuration |
 | `webview-ui/src/hooks/useIntersectionLazyLoad.ts` | Shared intersection-observer hook for lazy-loading list items in batches of 20 |
 | `icons/token-stack-lens.svg` | Current activity bar icon for the sidebar: stacked tokens with a magnifying lens |
 | `icons/zai.svg` | Legacy activity bar icon asset |

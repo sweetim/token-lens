@@ -38,6 +38,10 @@ let cacheTimestamp = 0;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const EMPTY_MODEL_DATA: ModelData = { createdDates: {}, pricing: {} };
 
+function isModelDataCacheFresh(): boolean {
+  return cachedData !== null && (dayjs().valueOf() - cacheTimestamp) < CACHE_TTL_MS;
+}
+
 function getFallbackModelData(): ModelDataFetchResult {
   return cachedData
     ? { data: cachedData, status: "cached" }
@@ -99,5 +103,5 @@ async function fetchModelData(): Promise<ModelData> {
   return result.data;
 }
 
-export { THREE_MONTHS_MS, ALLOWED_PROVIDERS, PROVIDER_ID_MAP, toOpenRouterModelId, fetchModelData, fetchModelDataWithStatus };
+export { THREE_MONTHS_MS, ALLOWED_PROVIDERS, PROVIDER_ID_MAP, toOpenRouterModelId, fetchModelData, fetchModelDataWithStatus, isModelDataCacheFresh };
 export type { ModelData, ModelDataFetchResult, ModelDataFetchStatus };

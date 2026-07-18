@@ -1,6 +1,6 @@
-import { readFileSync, statSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import dayjs from "dayjs";
 import { desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/sql-js";
@@ -8,8 +8,33 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import initSqlJs from "sql.js";
 import type { DayTokens, ModelCost, ProjectDayTokens, ProjectTokens } from "@/types";
 
-const DB_PATH = join(homedir(), ".local", "share", "kilo", "kilo.db");
-const PROJECT_ROOT_PREFIX = `${homedir()}/projects/`;
+function getDefaultDatabasePath(): string {
+  const dataHome = process.env.XDG_DATA_HOME
+    || (process.platform === "win32"
+      ? process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local")
+      : join(homedir(), ".local", "share"));
+  return join(dataHome, "kilo", "kilo.db");
+}
+
+let configuredDatabasePath: string | undefined;
+
+function setDatabasePath(databasePath: string | undefined): void {
+  const normalizedPath = databasePath?.trim() || undefined;
+  if (normalizedPath === configuredDatabasePath) {
+    return;
+  }
+  configuredDatabasePath = normalizedPath;
+  closeDatabase();
+}
+
+function getDatabasePath(): string {
+  return configuredDatabasePath ?? getDefaultDatabasePath();
+}
+
+function toProjectDisplayName(worktree: string): string {
+  const homePrefix = `${homedir()}${sep}`;
+  return worktree.startsWith(homePrefix) ? worktree.slice(homePrefix.length) : worktree;
+}
 
 function buildLocalTimezoneModifier(offsetMinutes: number): string {
   const offsetHours = Math.trunc(offsetMinutes / 60);
@@ -61,7 +86,6 @@ const cacheWriteValue = sql<number | null>`CAST(json_extract(${partTable.data}, 
 const costValue = sql<number | null>`CAST(json_extract(${partTable.data}, '$.cost') AS REAL)`;
 const providerValue = sql<string>`json_extract(${messageTable.data}, '$.providerID')`;
 const modelValue = sql<string>`json_extract(${messageTable.data}, '$.modelID')`;
-const projectNameValue = sql<string>`REPLACE(${projectTable.worktree}, ${PROJECT_ROOT_PREFIX}, '')`;
 const stepFinishCondition = sql`${stepType} = 'step-finish'`;
 
 type SqlJsStatic = Awaited<ReturnType<typeof initSqlJs>>;
@@ -121,15 +145,25 @@ async function openDatabase(): Promise<DrizzleDatabase> {
     databaseClient.close();
     databaseClient = null;
   }
-  const databaseFile = readFileSync(DB_PATH);
+  const databasePath = getDatabasePath();
+  const openedMtimeMs = (await stat(databasePath)).mtimeMs;
+  const databaseFile = await readFile(databasePath);
   databaseClient = new SQL.Database(databaseFile);
   database = drizzle(databaseClient);
-  databaseMtimeMs = statSync(DB_PATH).mtimeMs;
+  databaseMtimeMs = openedMtimeMs;
   return database;
 }
 
+async function getCurrentDatabaseMtimeMs(): Promise<number> {
+  return (await stat(getDatabasePath())).mtimeMs;
+}
+
+function getLoadedDatabaseMtimeMs(): number {
+  return databaseMtimeMs;
+}
+
 async function getDatabase(): Promise<DrizzleDatabase> {
-  const currentMtimeMs = statSync(DB_PATH).mtimeMs;
+  const currentMtimeMs = await getCurrentDatabaseMtimeMs();
   if (database && currentMtimeMs === databaseMtimeMs) {
     return database;
   }
@@ -174,7 +208,7 @@ function fetchProjectTokens(database: DrizzleDatabase): ProjectTokens[] {
 
   return database
     .select({
-      project: projectNameValue.as("project"),
+      project: projectTable.worktree,
       totalTokens: totalTokens.as("total_tokens"),
       inputTokens: inputTokens.as("input_tokens"),
       outputTokens: outputTokens.as("output_tokens"),
@@ -195,7 +229,7 @@ function fetchProjectTokens(database: DrizzleDatabase): ProjectTokens[] {
     .orderBy(desc(totalTokens))
     .all()
     .map((row) => ({
-      project: String(row.project ?? ""),
+      project: toProjectDisplayName(String(row.project ?? "")),
       totalTokens: toNumber(row.totalTokens),
       inputTokens: toNumber(row.inputTokens),
       outputTokens: toNumber(row.outputTokens),
@@ -273,7 +307,7 @@ function fetchProjectDayTokens(database: DrizzleDatabase): ProjectDayTokens[] {
 
   return database
     .select({
-      project: projectNameValue.as("project"),
+      project: projectTable.worktree,
       day: buildLocalDayValue().as("day"),
       totalTokens: totalTokens.as("total_tokens"),
       inputTokens: inputTokens.as("input_tokens"),
@@ -295,7 +329,7 @@ function fetchProjectDayTokens(database: DrizzleDatabase): ProjectDayTokens[] {
     .orderBy(desc(buildLocalDayValue()), desc(totalTokens))
     .all()
     .map((row) => ({
-      project: String(row.project ?? ""),
+      project: toProjectDisplayName(String(row.project ?? "")),
       day: String(row.day ?? ""),
       totalTokens: toNumber(row.totalTokens),
       inputTokens: toNumber(row.inputTokens),
@@ -318,7 +352,7 @@ function fetchModelCosts(database: DrizzleDatabase): ModelCost[] {
 
   return database
     .select({
-      project: projectNameValue.as("project"),
+      project: projectTable.worktree,
       provider: providerValue.as("provider"),
       model: modelValue.as("model"),
       inputTokens: inputTokens.as("input_tokens"),
@@ -335,7 +369,7 @@ function fetchModelCosts(database: DrizzleDatabase): ModelCost[] {
     .orderBy(desc(inputTokens))
     .all()
     .map((row) => ({
-      project: String(row.project ?? ""),
+      project: toProjectDisplayName(String(row.project ?? "")),
       provider: String(row.provider ?? ""),
       model: String(row.model ?? ""),
       inputTokens: toNumber(row.inputTokens),
@@ -352,7 +386,7 @@ function fetchProjectModels(database: DrizzleDatabase): ProjectModelRow[] {
 
   return database
     .select({
-      project: projectNameValue.as("project"),
+      project: projectTable.worktree,
       provider: providerValue.as("provider"),
       model: modelValue.as("model"),
       steps: steps.as("steps"),
@@ -368,7 +402,7 @@ function fetchProjectModels(database: DrizzleDatabase): ProjectModelRow[] {
     .orderBy(desc(totalCost))
     .all()
     .map((row) => ({
-      project: String(row.project ?? ""),
+      project: toProjectDisplayName(String(row.project ?? "")),
       provider: String(row.provider ?? ""),
       model: String(row.model ?? ""),
       steps: toNumber(row.steps),
@@ -420,9 +454,13 @@ async function querySidebarData(): Promise<SidebarQueryData> {
 }
 
 export {
-  DB_PATH,
   buildLocalTimezoneModifier,
-  preloadSqlModule,
   closeDatabase,
+  getCurrentDatabaseMtimeMs,
+  getDatabasePath,
+  getLoadedDatabaseMtimeMs,
+  preloadSqlModule,
   querySidebarData,
+  setDatabasePath,
+  toProjectDisplayName,
 };

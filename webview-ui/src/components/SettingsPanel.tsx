@@ -31,7 +31,12 @@ function SettingsPanel({ settings, onClose }: SettingsPanelProps) {
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(String(settings.refreshIntervalMinutes));
   const [intervalSaved, setIntervalSaved] = useState(false);
+  const [databasePath, setDatabasePath] = useState(settings.databasePath);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDatabasePath(settings.databasePath);
+  }, [settings.databasePath]);
   const pendingToastRef = useRef<string | null>(null);
 
   function showToast(message: string) {
@@ -54,6 +59,11 @@ function SettingsPanel({ settings, onClose }: SettingsPanelProps) {
     setApiKeySaved(true);
     pendingToastRef.current = "API Key saved successfully";
     setTimeout(() => setApiKeySaved(false), 2000);
+  }
+
+  function handleSaveDatabasePath() {
+    postWebviewMessage({ type: "saveDatabasePath", databasePath: databasePath.trim() });
+    pendingToastRef.current = "Database path saved successfully";
   }
 
   function handleSaveInterval() {
@@ -115,16 +125,17 @@ function SettingsPanel({ settings, onClose }: SettingsPanelProps) {
         <label class={LABEL_CLASS}>Kilocode Database Path</label>
         <div class={ACTION_ROW_CLASS}>
           <input
-            class={`${INPUT_CLASS} cursor-default opacity-80 focus:border-(--border)`}
+            class={INPUT_CLASS}
             type="text"
-            value={settings.databasePath}
-            readOnly
+            placeholder="Path to kilo.db"
+            value={databasePath}
+            onInput={(e) => setDatabasePath((e.target as HTMLInputElement).value)}
           />
-          <button class={ICON_BUTTON_CLASS} onClick={() => navigator.clipboard.writeText(settings.databasePath)} title="Copy path">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 4h6v1H4V4zm0 3h6v1H4V7zm0 3h4v1H4v-1zm8.5-8H5.5A1.5 1.5 0 004 3.5v7A1.5 1.5 0 005.5 12h7a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0012.5 2zm.5 8.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-7a.5.5 0 01.5-.5h7a.5.5 0 01.5.5v7zM2 5.5A1.5 1.5 0 013.5 4H3v8.5a.5.5 0 00.5.5H12v.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 012 13.5v-8z"/></svg>
+          <button class={ICON_BUTTON_CLASS} onClick={handleSaveDatabasePath} title="Save database path">
+            <SaveIcon />
           </button>
         </div>
-        <span class={HINT_CLASS}>Token usage data is read from this SQLite database.</span>
+        <span class={HINT_CLASS}>Token usage data is read from this SQLite database. Clear the field and save to restore the platform default.</span>
       </div>
 
       <div class={SECTION_CLASS}>

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { closeDatabase, preloadSqlModule } from "@/db";
+import { closeDatabase, preloadSqlModule, setDatabasePath } from "@/db";
 import { logger, formatLogMessage, setLogSink } from "@/logger";
 import { TokenSidebarProvider } from "@/tokenSidebar";
 import type { QuotaState, QuotaSummary } from "@/types";
@@ -35,8 +35,9 @@ type QuotaFetchResult =
   | { type: "invalidResponse"; message: string };
 
 const QUOTA_SNAPSHOT_STORAGE_KEY = "token-lens.quotaSnapshot";
-const REFRESH_INTERVAL_STORAGE_KEY = "token-lens.refreshIntervalMinutes";
+const LEGACY_REFRESH_INTERVAL_STORAGE_KEY = "token-lens.refreshIntervalMinutes";
 const SAVED_MODELS_STORAGE_KEY = "token-lens.savedModels";
+const CONFIGURATION_SECTION = "token-lens";
 const DEFAULT_REFRESH_INTERVAL_MINUTES = 5;
 const TRANSIENT_RETRY_DELAYS_MS = [10000, 30000, 60000, 120000, 300000] as const;
 const LOADING_QUOTA_STATE: QuotaState = {
@@ -266,11 +267,36 @@ let persistedQuotaSummary: QuotaSummary | undefined;
 let consecutiveTransientFailures = 0;
 
 function getRefreshIntervalMinutes(): number {
-  return extensionContext.globalState.get<number>(REFRESH_INTERVAL_STORAGE_KEY) ?? DEFAULT_REFRESH_INTERVAL_MINUTES;
+  const configuredMinutes = vscode.workspace.getConfiguration(CONFIGURATION_SECTION).get<number>("refreshIntervalMinutes");
+  if (typeof configuredMinutes === "number" && Number.isFinite(configuredMinutes) && configuredMinutes >= 1) {
+    return configuredMinutes;
+  }
+  return DEFAULT_REFRESH_INTERVAL_MINUTES;
 }
 
 async function saveRefreshIntervalMinutes(minutes: number): Promise<void> {
-  await extensionContext.globalState.update(REFRESH_INTERVAL_STORAGE_KEY, minutes);
+  await vscode.workspace.getConfiguration(CONFIGURATION_SECTION).update("refreshIntervalMinutes", minutes, vscode.ConfigurationTarget.Global);
+}
+
+async function saveDatabasePathSetting(databasePath: string): Promise<void> {
+  const trimmedPath = databasePath.trim();
+  await vscode.workspace.getConfiguration(CONFIGURATION_SECTION).update("databasePath", trimmedPath || undefined, vscode.ConfigurationTarget.Global);
+}
+
+function applyDatabasePathConfiguration(): void {
+  setDatabasePath(vscode.workspace.getConfiguration(CONFIGURATION_SECTION).get<string>("databasePath"));
+}
+
+async function migrateLegacyRefreshInterval(): Promise<void> {
+  const legacyMinutes = extensionContext.globalState.get<number>(LEGACY_REFRESH_INTERVAL_STORAGE_KEY);
+  if (typeof legacyMinutes !== "number") {
+    return;
+  }
+  const configuration = vscode.workspace.getConfiguration(CONFIGURATION_SECTION);
+  if (configuration.inspect<number>("refreshIntervalMinutes")?.globalValue === undefined) {
+    await configuration.update("refreshIntervalMinutes", legacyMinutes, vscode.ConfigurationTarget.Global);
+  }
+  await extensionContext.globalState.update(LEGACY_REFRESH_INTERVAL_STORAGE_KEY, undefined);
 }
 
 function getSavedModels(): string[] {
@@ -329,7 +355,7 @@ async function setQuotaState(nextQuotaState: QuotaState): Promise<void> {
 function setQuotaStateLight(nextQuotaState: QuotaState): void {
   quotaState = nextQuotaState;
   applyStatusBarState(nextQuotaState);
-  tokenSidebar.showLoading(nextQuotaState);
+  tokenSidebar.updateQuota(nextQuotaState);
 }
 
 function scheduleRefresh(delayMs: number): void {
@@ -532,6 +558,8 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   extensionContext = context;
   secrets = context.secrets;
+  applyDatabasePathConfiguration();
+  void migrateLegacyRefreshInterval();
 
   const storedQuotaSummary = context.globalState.get<QuotaSummary | undefined>(QUOTA_SNAPSHOT_STORAGE_KEY);
   persistedQuotaSummary = isQuotaSummary(storedQuotaSummary) ? storedQuotaSummary : undefined;
@@ -549,6 +577,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await saveRefreshIntervalMinutes(minutes);
       scheduleRefresh(getRefreshDelayMs());
     },
+    saveDatabasePath: saveDatabasePathSetting,
     getSavedModels,
     saveSavedModels,
   });
@@ -567,7 +596,21 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("token-lens.refresh", async () => {
+      tokenSidebar.invalidateCachedData();
       await refreshQuota(true);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration(`${CONFIGURATION_SECTION}.databasePath`)) {
+        applyDatabasePathConfiguration();
+        tokenSidebar.invalidateCachedData();
+        void tokenSidebar.refresh();
+      }
+      if (event.affectsConfiguration(`${CONFIGURATION_SECTION}.refreshIntervalMinutes`)) {
+        scheduleRefresh(getRefreshDelayMs());
+      }
     }),
   );
 

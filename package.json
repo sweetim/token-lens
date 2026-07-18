@@ -90,6 +90,22 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "Token Lens",
+      "properties": {
+        "token-lens.databasePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Kilo SQLite database. Leave empty to use the platform default ($XDG_DATA_HOME/kilo/kilo.db, ~/.local/share/kilo/kilo.db, or %LOCALAPPDATA%\\kilo\\kilo.db on Windows)."
+        },
+        "token-lens.refreshIntervalMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "description": "How often to automatically refresh quota and token usage data, in minutes."
+        }
+      }
     }
   },
   "scripts": {

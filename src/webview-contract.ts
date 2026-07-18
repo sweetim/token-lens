@@ -183,6 +183,9 @@ type WebviewInboundMessage = {
   type: "fullUpdate";
   data: WebviewData;
 } | {
+  type: "quotaUpdate";
+  quotaState: QuotaStateData;
+} | {
   type: "showSettings";
 } | {
   type: "settingsData";
@@ -199,6 +202,9 @@ type WebviewOutboundMessage = {
 } | {
   type: "saveRefreshInterval";
   minutes: number;
+} | {
+  type: "saveDatabasePath";
+  databasePath: string;
 } | {
   type: "saveSavedModels";
   savedModels: string[];

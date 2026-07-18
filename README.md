@@ -40,7 +40,7 @@
 
 ## Data Source
 
-Token Lens reads usage data from the local Kilo SQLite database (`~/.local/share/kilo/kilo.db`) and your z.ai account quota via the z.ai API.
+Token Lens reads usage data from the local Kilo SQLite database and your z.ai account quota via the z.ai API. The database location defaults to `$XDG_DATA_HOME/kilo/kilo.db` (`~/.local/share/kilo/kilo.db`, or `%LOCALAPPDATA%\kilo\kilo.db` on Windows) and can be changed via the `token-lens.databasePath` setting or the in-sidebar settings panel.
 
 ## Getting Started
 

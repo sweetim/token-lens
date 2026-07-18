@@ -33,6 +33,8 @@ function Root() {
       if (message.type === "fullUpdate" && message.data) {
         setData(message.data);
         syncSavedModels(message.data.savedModels);
+      } else if (message.type === "quotaUpdate" && message.quotaState) {
+        setData((previousData) => ({ ...previousData, quotaState: message.quotaState }));
       } else if (message.type === "showSettings") {
         setShowSettings(true);
         postWebviewMessage({ type: "requestSettings" });

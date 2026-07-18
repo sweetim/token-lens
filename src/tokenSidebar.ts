@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { DB_PATH, querySidebarData } from "@/db";
+import { getCurrentDatabaseMtimeMs, getDatabasePath, getLoadedDatabaseMtimeMs, querySidebarData } from "@/db";
 import { getHtmlFromData } from "@/html";
 import { logger } from "@/logger";
-import { fetchModelDataWithStatus } from "@/model-data";
+import { fetchModelDataWithStatus, isModelDataCacheFresh } from "@/model-data";
 import type { ModelData } from "@/model-data";
-import { buildWebviewData } from "@/webview/data";
+import { buildQuotaStateData, buildWebviewData } from "@/webview/data";
 import type { QuotaState } from "@/types";
 import type { SettingsData, WebviewData, WebviewOutboundMessage } from "@/webview-contract";
 
@@ -63,6 +63,7 @@ type SettingsCallbacks = {
   saveApiKey: (apiKey: string) => Promise<void>;
   getRefreshIntervalMinutes: () => number;
   saveRefreshIntervalMinutes: (minutes: number) => Promise<void>;
+  saveDatabasePath: (databasePath: string) => Promise<void>;
   getSavedModels: () => string[];
   saveSavedModels: (savedModels: string[]) => Promise<void>;
 };
@@ -75,6 +76,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
   private webviewReady = false;
   private latestWebviewData?: WebviewData;
   private refreshGeneration = 0;
+  private lastQueriedMtimeMs = -1;
   private settingsCallbacks?: SettingsCallbacks;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
@@ -127,6 +129,12 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
+      if (message.type === "saveDatabasePath") {
+        await this.settingsCallbacks?.saveDatabasePath(message.databasePath);
+        void this.handleRequestSettings();
+        return;
+      }
+
       if (message.type === "saveSavedModels") {
         void this.settingsCallbacks?.saveSavedModels(message.savedModels);
         return;
@@ -150,22 +158,38 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
     const settings: SettingsData = {
       hasApiKey: !!(await this.settingsCallbacks.getApiKey()),
       refreshIntervalMinutes: this.settingsCallbacks.getRefreshIntervalMinutes(),
-      databasePath: DB_PATH,
+      databasePath: getDatabasePath(),
     };
     void this.view.webview.postMessage({ type: "settingsData", data: settings });
   }
 
-  public showLoading(quotaState: QuotaState): void {
+  public updateQuota(quotaState: QuotaState): void {
     this.quotaState = quotaState;
-    const currentView = this.view;
-    if (!currentView || !this.latestWebviewData) {
-      return;
+    const quotaStateData = buildQuotaStateData(quotaState);
+    if (this.latestWebviewData) {
+      this.latestWebviewData = {
+        ...this.latestWebviewData,
+        quotaState: quotaStateData,
+      };
     }
-    this.latestWebviewData = {
-      ...this.latestWebviewData,
-      quotaState: { status: quotaState.status, message: quotaState.message, summary: null },
-    };
-    this.sendToWebview(currentView);
+    if (this.view && this.webviewReady) {
+      void this.view.webview.postMessage({ type: "quotaUpdate", quotaState: quotaStateData });
+    }
+  }
+
+  public invalidateCachedData(): void {
+    this.lastQueriedMtimeMs = -1;
+  }
+
+  private async canSkipDataRebuild(): Promise<boolean> {
+    if (!this.latestWebviewData?.hasData || !isModelDataCacheFresh()) {
+      return false;
+    }
+    try {
+      return (await getCurrentDatabaseMtimeMs()) === this.lastQueriedMtimeMs;
+    } catch {
+      return false;
+    }
   }
 
   private sendToWebview(currentView: vscode.WebviewView): void {
@@ -191,10 +215,20 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    if (await this.canSkipDataRebuild()) {
+      if (currentView !== this.view) {
+        return;
+      }
+      this.updateQuota(quotaState);
+      return;
+    }
+
     const refreshGeneration = ++this.refreshGeneration;
 
     try {
+      const modelDataCacheWasFresh = isModelDataCacheFresh();
       const { projects, days, projectDays, modelCosts, projectModels, dayModels } = await querySidebarData();
+      this.lastQueriedMtimeMs = getLoadedDatabaseMtimeMs();
 
       const projectModelsMap = new Map<string, typeof projectModels>();
       for (const row of projectModels) {
@@ -242,14 +276,16 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const partialData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, EMPTY_MODEL_DATA, "loading", this.settingsCallbacks?.getSavedModels() ?? []);
+      if (!modelDataCacheWasFresh) {
+        const partialData = await buildWebviewData(projects, days, projectDays, modelCosts, this.quotaState, EMPTY_MODEL_DATA, "loading", this.settingsCallbacks?.getSavedModels() ?? []);
 
-      if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
-        return;
+        if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
+          return;
+        }
+
+        this.latestWebviewData = partialData;
+        this.sendToWebview(currentView);
       }
-
-      this.latestWebviewData = partialData;
-      this.sendToWebview(currentView);
 
       const modelData = await fetchModelDataWithStatus();
 
@@ -257,7 +293,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const fullData = await buildWebviewData(projects, days, projectDays, modelCosts, quotaState, modelData.data, modelData.status, this.settingsCallbacks?.getSavedModels() ?? []);
+      const fullData = await buildWebviewData(projects, days, projectDays, modelCosts, this.quotaState, modelData.data, modelData.status, this.settingsCallbacks?.getSavedModels() ?? []);
 
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;
@@ -273,7 +309,7 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
       }
 
       if (!this.latestWebviewData || !this.latestWebviewData.hasData) {
-        this.latestWebviewData = buildFailureWebviewData(quotaState, this.settingsCallbacks?.getSavedModels() ?? []);
+        this.latestWebviewData = buildFailureWebviewData(this.quotaState, this.settingsCallbacks?.getSavedModels() ?? []);
         this.sendToWebview(currentView);
       }
     }
