@@ -14,7 +14,7 @@ const CLOCK_SVG = (
 
 function formatDurationUntil(timestamp: number): string {
   const diff = timestamp - Date.now();
-  if (diff <= 0) return "now";
+  if (diff <= 0) return "due";
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
   if (hours > 0) return `${hours}h ${minutes}m`;

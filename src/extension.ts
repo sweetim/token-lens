@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { closeDatabase, preloadSqlModule } from "@/db";
+import { logger, formatLogMessage, setLogSink } from "@/logger";
 import { TokenSidebarProvider } from "@/tokenSidebar";
 import type { QuotaState, QuotaSummary } from "@/types";
 
@@ -37,7 +38,6 @@ const QUOTA_SNAPSHOT_STORAGE_KEY = "token-lens.quotaSnapshot";
 const REFRESH_INTERVAL_STORAGE_KEY = "token-lens.refreshIntervalMinutes";
 const SAVED_MODELS_STORAGE_KEY = "token-lens.savedModels";
 const DEFAULT_REFRESH_INTERVAL_MINUTES = 5;
-const NORMAL_REFRESH_DELAY_MS = DEFAULT_REFRESH_INTERVAL_MINUTES * 60 * 1000;
 const TRANSIENT_RETRY_DELAYS_MS = [10000, 30000, 60000, 120000, 300000] as const;
 const LOADING_QUOTA_STATE: QuotaState = {
   status: "loading",
@@ -51,7 +51,7 @@ function formatResetTime(timestamp: number): string {
 function formatDuration(timestamp: number): string {
   const diff = timestamp - Date.now();
   if (diff <= 0) {
-    return "now";
+    return "due";
   }
 
   const hours = Math.floor(diff / 3600000);
@@ -66,7 +66,7 @@ function formatDuration(timestamp: number): string {
 function formatDurationCompact(timestamp: number): string {
   const diff = timestamp - Date.now();
   if (diff <= 0) {
-    return "now";
+    return "due";
   }
   const hours = Math.floor(diff / 3600000);
   if (hours > 0) {
@@ -296,7 +296,7 @@ async function persistQuotaSummary(nextQuotaSummary: QuotaSummary | undefined): 
 
 function applyStatusBarState(nextQuotaState: QuotaState): void {
   if (nextQuotaState.summary) {
-    statusBarItem.text = `$(zap) ${nextQuotaState.summary.usedPercentage.toFixed(0)}%  $(timeline-view-icon) ${formatDurationCompact(nextQuotaState.summary.nextResetTime)}`;
+    statusBarItem.text = `$(zap) ${nextQuotaState.summary.usedPercentage.toFixed(0)}%  $(clock) ${formatDurationCompact(nextQuotaState.summary.nextResetTime)}`;
     statusBarItem.backgroundColor = getStatusBackgroundColor(nextQuotaState.summary.usedPercentage);
   } else if (nextQuotaState.status === "loading") {
     statusBarItem.text = "$(loading~spin) Usage ...";
@@ -306,6 +306,9 @@ function applyStatusBarState(nextQuotaState: QuotaState): void {
     statusBarItem.backgroundColor = undefined;
   } else if (nextQuotaState.status === "authError") {
     statusBarItem.text = "$(warning) API auth failed";
+    statusBarItem.backgroundColor = undefined;
+  } else if (nextQuotaState.status === "rateLimited") {
+    statusBarItem.text = "$(clock) Rate limited";
     statusBarItem.backgroundColor = undefined;
   } else {
     statusBarItem.text = "$(warning) Quota unavailable";
@@ -321,6 +324,12 @@ async function setQuotaState(nextQuotaState: QuotaState): Promise<void> {
   quotaState = nextQuotaState;
   applyStatusBarState(nextQuotaState);
   await tokenSidebar.refresh(nextQuotaState);
+}
+
+function setQuotaStateLight(nextQuotaState: QuotaState): void {
+  quotaState = nextQuotaState;
+  applyStatusBarState(nextQuotaState);
+  tokenSidebar.showLoading(nextQuotaState);
 }
 
 function scheduleRefresh(delayMs: number): void {
@@ -368,7 +377,8 @@ async function fetchQuota(): Promise<QuotaFetchResult> {
     let payload: unknown;
     try {
       payload = await response.json();
-    } catch {
+    } catch (error) {
+      logger.warn("Quota response JSON parse failed", error);
       return {
         type: "invalidResponse",
         message: "z.ai returned invalid quota JSON.",
@@ -395,7 +405,8 @@ async function fetchQuota(): Promise<QuotaFetchResult> {
       data: payload.data,
       quotaSummary: nextQuotaSummary,
     };
-  } catch {
+  } catch (error) {
+    logger.warn("Quota fetch failed", error);
     return {
       type: "transientError",
       message: "Could not reach the z.ai quota API.",
@@ -406,9 +417,7 @@ async function fetchQuota(): Promise<QuotaFetchResult> {
 async function refreshQuota(showLoadingState: boolean): Promise<void> {
   if (refreshPromise) {
     if (showLoadingState) {
-      quotaState = LOADING_QUOTA_STATE;
-      applyStatusBarState(LOADING_QUOTA_STATE);
-      tokenSidebar.showLoading(LOADING_QUOTA_STATE);
+      setQuotaStateLight(LOADING_QUOTA_STATE);
     }
     return refreshPromise;
   }
@@ -505,7 +514,22 @@ async function refreshQuota(showLoadingState: boolean): Promise<void> {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  void preloadSqlModule().catch(() => {});
+  const outputChannel = vscode.window.createOutputChannel("TokenLens", { log: true });
+  context.subscriptions.push(outputChannel);
+  setLogSink((level, message, error) => {
+    const formatted = formatLogMessage(message, error);
+    if (level === "info") {
+      outputChannel.info(formatted);
+    } else if (level === "warn") {
+      outputChannel.warn(formatted);
+    } else {
+      outputChannel.error(formatted);
+    }
+  });
+
+  void preloadSqlModule().catch((error) => {
+    logger.error("Failed to preload SQL module", error);
+  });
   extensionContext = context;
   secrets = context.secrets;
 

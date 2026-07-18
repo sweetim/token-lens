@@ -18,7 +18,9 @@ function buildLocalTimezoneModifier(offsetMinutes: number): string {
   return `'unixepoch', '${offsetSign}${Math.abs(offsetHours)} hours'${remainingMinutes ? `, '${offsetSign}${remainingMinutes} minutes'` : ""}`;
 }
 
-const localTimezoneModifier = buildLocalTimezoneModifier(dayjs().utcOffset());
+function buildLocalDayValue() {
+  return sql<string>`date(${partTable.timeCreated} / 1000, ${sql.raw(buildLocalTimezoneModifier(dayjs().utcOffset()))})`;
+}
 
 const partTable = sqliteTable("part", {
   id: text("id").primaryKey(),
@@ -59,7 +61,6 @@ const cacheWriteValue = sql<number | null>`CAST(json_extract(${partTable.data}, 
 const costValue = sql<number | null>`CAST(json_extract(${partTable.data}, '$.cost') AS REAL)`;
 const providerValue = sql<string>`json_extract(${messageTable.data}, '$.providerID')`;
 const modelValue = sql<string>`json_extract(${messageTable.data}, '$.modelID')`;
-const localDayValue = sql<string>`date(${partTable.timeCreated} / 1000, ${sql.raw(localTimezoneModifier)})`;
 const projectNameValue = sql<string>`REPLACE(${projectTable.worktree}, ${PROJECT_ROOT_PREFIX}, '')`;
 const stepFinishCondition = sql`${stepType} = 'step-finish'`;
 
@@ -223,7 +224,7 @@ function fetchDayTokens(database: DrizzleDatabase): DayTokens[] {
 
   return database
     .select({
-      day: localDayValue.as("day"),
+      day: buildLocalDayValue().as("day"),
       totalTokens: totalTokens.as("total_tokens"),
       inputTokens: inputTokens.as("input_tokens"),
       outputTokens: outputTokens.as("output_tokens"),
@@ -239,8 +240,8 @@ function fetchDayTokens(database: DrizzleDatabase): DayTokens[] {
     .innerJoin(messageTable, sql`${messageTable.id} = ${partTable.messageId}`)
     .innerJoin(sessionTable, sql`${sessionTable.id} = ${messageTable.sessionId}`)
     .where(stepFinishCondition)
-    .groupBy(localDayValue)
-    .orderBy(desc(localDayValue))
+    .groupBy(buildLocalDayValue())
+    .orderBy(desc(buildLocalDayValue()))
     .all()
     .map((row) => ({
       day: String(row.day ?? ""),
@@ -273,7 +274,7 @@ function fetchProjectDayTokens(database: DrizzleDatabase): ProjectDayTokens[] {
   return database
     .select({
       project: projectNameValue.as("project"),
-      day: localDayValue.as("day"),
+      day: buildLocalDayValue().as("day"),
       totalTokens: totalTokens.as("total_tokens"),
       inputTokens: inputTokens.as("input_tokens"),
       outputTokens: outputTokens.as("output_tokens"),
@@ -290,8 +291,8 @@ function fetchProjectDayTokens(database: DrizzleDatabase): ProjectDayTokens[] {
     .innerJoin(sessionTable, sql`${sessionTable.id} = ${messageTable.sessionId}`)
     .innerJoin(projectTable, sql`${projectTable.id} = ${sessionTable.projectId}`)
     .where(stepFinishCondition)
-    .groupBy(projectTable.worktree, localDayValue)
-    .orderBy(desc(localDayValue), desc(totalTokens))
+    .groupBy(projectTable.worktree, buildLocalDayValue())
+    .orderBy(desc(buildLocalDayValue()), desc(totalTokens))
     .all()
     .map((row) => ({
       project: String(row.project ?? ""),
@@ -383,7 +384,7 @@ function fetchDayModels(database: DrizzleDatabase): DayModelRow[] {
 
   return database
     .select({
-      day: localDayValue.as("day"),
+      day: buildLocalDayValue().as("day"),
       provider: providerValue.as("provider"),
       model: modelValue.as("model"),
       steps: steps.as("steps"),
@@ -394,7 +395,7 @@ function fetchDayModels(database: DrizzleDatabase): DayModelRow[] {
     .innerJoin(messageTable, sql`${messageTable.id} = ${partTable.messageId}`)
     .innerJoin(sessionTable, sql`${sessionTable.id} = ${messageTable.sessionId}`)
     .where(stepFinishCondition)
-    .groupBy(localDayValue, providerValue, modelValue)
+    .groupBy(buildLocalDayValue(), providerValue, modelValue)
     .orderBy(desc(totalCost))
     .all()
     .map((row) => ({

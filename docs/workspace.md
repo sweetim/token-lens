@@ -15,10 +15,11 @@
 
 ```
 src/
-├── extension.ts      # Extension entry point — status bar item, commands, quota polling, persisted snapshot recovery, and retry scheduling
-├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel; uses HTML injection on first load, then postMessage for incremental updates
-├── html.ts           # Thin wrapper that delegates to webview/data.ts and webview/document.ts to build the sidebar HTML
+├── extension.ts      # Extension entry point — status bar item, commands, quota polling, persisted snapshot recovery, retry scheduling, and OutputChannel log sink wiring
+├── tokenSidebar.ts   # WebviewViewProvider for the sidebar panel; uses HTML injection on first load, then postMessage for incremental updates; surfaces a failure payload when the DB query fails and no prior data is available
+├── html.ts           # Thin wrapper that delegates to webview/document.ts to build the sidebar HTML
 ├── db.ts             # Queries the local Kilo SQLite database via Drizzle ORM on top of the `sql.js` SQLite driver
+├── logger.ts         # Sink-based logger used across extension modules; the vscode LogOutputChannel sink is installed in `activate`, keeping the module vscode-free so test-imported code can use it
 ├── types.ts          # ProjectTokens, DayTokens, ProjectDayTokens, ModelUsage, ModelCost, QuotaSummary, QuotaState, and QuotaStateStatus type definitions
 ├── bars.ts           # Stacked bar chart HTML helpers and segment colors
 ├── format.ts         # Number/token formatting, HTML escaping, date formatting
@@ -193,6 +194,7 @@ webview-ui/
 | `test/db-timezone.test.mjs` | Node regression test that verifies local day bucketing keeps the correct timezone offset sign |
 | `src/webview-contract.ts` | Shared extension/webview payload, pricing state, message (`WebviewInboundMessage`/`WebviewOutboundMessage`), settings (`SettingsData`), and persisted-state types |
 | `src/webview-model-cost.ts` | Shared model-cost calculator used on both sides of the webview boundary |
+| `src/logger.ts` | Sink-based logger (`logger.info/warn/error`) plus `setLogSink`/`formatLogMessage`; the vscode `LogOutputChannel` sink is installed in `activate`, and the default sink is a no-op so test-imported modules can import it without a vscode runtime |
 | `src/webview/data.ts` | Server-side webview payload builder |
 | `src/webview/document.ts` | Webview HTML document builder with JSON payload + CSP |
 | `webview-ui/tsconfig.json` | TypeScript config for browser-side code and shared cross-boundary files |

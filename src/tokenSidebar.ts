@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { DB_PATH, querySidebarData } from "@/db";
-import { getHtml, getHtmlFromData } from "@/html";
+import { getHtmlFromData } from "@/html";
+import { logger } from "@/logger";
 import { fetchModelDataWithStatus } from "@/model-data";
 import type { ModelData } from "@/model-data";
 import { buildWebviewData } from "@/webview/data";
@@ -38,6 +39,24 @@ const LOADING_WEBVIEW_DATA: WebviewData = {
   hasProjects: false,
   savedModels: [],
 };
+
+function buildFailureWebviewData(quotaState: QuotaState, savedModels: string[]): WebviewData {
+  return {
+    ...LOADING_WEBVIEW_DATA,
+    quotaState: {
+      status: quotaState.status,
+      message: quotaState.message,
+      summary: quotaState.summary
+        ? {
+            usedPercentage: quotaState.summary.usedPercentage,
+            remainingPercentage: quotaState.summary.remainingPercentage,
+            nextResetTime: quotaState.summary.nextResetTime,
+          }
+        : null,
+    },
+    savedModels,
+  };
+}
 
 type SettingsCallbacks = {
   getApiKey: () => Promise<string | undefined>;
@@ -246,20 +265,16 @@ export class TokenSidebarProvider implements vscode.WebviewViewProvider {
 
       this.latestWebviewData = fullData;
       this.sendToWebview(currentView);
-    } catch {
+    } catch (error) {
+      logger.error("Failed to query sidebar data", error);
+
       if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
         return;
       }
 
-      if (!this.initialized) {
-        const fallbackHtml = await getHtml(currentView.webview, this.extensionUri, [], [], [], [], quotaState, this.settingsCallbacks?.getSavedModels() ?? []);
-
-        if (refreshGeneration !== this.refreshGeneration || currentView !== this.view) {
-          return;
-        }
-
-        currentView.webview.html = fallbackHtml;
-        this.initialized = true;
+      if (!this.latestWebviewData || !this.latestWebviewData.hasData) {
+        this.latestWebviewData = buildFailureWebviewData(quotaState, this.settingsCallbacks?.getSavedModels() ?? []);
+        this.sendToWebview(currentView);
       }
     }
   }

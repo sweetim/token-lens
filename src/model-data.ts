@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { logger } from "@/logger";
 
 const THREE_MONTHS_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -87,7 +88,8 @@ async function fetchModelDataWithStatus(): Promise<ModelDataFetchResult> {
     cachedData = { createdDates, pricing };
     cacheTimestamp = now;
     return { data: cachedData, status: "ready" };
-  } catch {
+  } catch (error) {
+    logger.warn("OpenRouter model data fetch failed", error);
     return getFallbackModelData();
   }
 }
